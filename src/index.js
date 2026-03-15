@@ -19,6 +19,7 @@ const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
 const { logger } = require('./services/logger');
+const { runMigrations } = require('./db/migrate');
 
 const app = express();
 app.use(cors());
@@ -75,6 +76,15 @@ cron.schedule('0 */6 * * *', async () => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => {
-  logger.info(`[Minhelet Bot] Running on port ${PORT}`);
+
+// Run DB migrations before starting the server
+runMigrations().then(() => {
+  app.listen(PORT, () => {
+    logger.info(`[Minhelet Bot] Running on port ${PORT}`);
+  });
+}).catch((err) => {
+  logger.error('[Minhelet Bot] Failed to run migrations, starting anyway:', err.message);
+  app.listen(PORT, () => {
+    logger.info(`[Minhelet Bot] Running on port ${PORT} (migration failed)`);
+  });
 });

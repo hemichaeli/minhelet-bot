@@ -117,11 +117,32 @@ const QUANTUM_WA_MAPPINGS = {
 
 // ==================== AUTH ====================
 
-function getBasicAuth() {
-  const username = process.env.INFORU_USERNAME;
-  const password = process.env.INFORU_PASSWORD;
+function getBasicAuth(overrideUsername, overridePassword) {
+  const username = overrideUsername || process.env.INFORU_USERNAME;
+  const password = overridePassword || process.env.INFORU_PASSWORD;
   if (!username || !password) throw new Error('INFORU credentials not configured');
   return 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
+}
+
+/**
+ * Get INFORU credentials for a specific campaign.
+ * Falls back to global env vars if campaign has no dedicated credentials.
+ */
+async function getCampaignCredentials(campaignId) {
+  if (!campaignId) return { username: null, password: null };
+  try {
+    const result = await pool.query(
+      `SELECT inforu_username, inforu_password FROM campaign_schedule_config WHERE zoho_campaign_id=$1`,
+      [campaignId]
+    );
+    const row = result.rows[0];
+    return {
+      username: row?.inforu_username || null,
+      password: row?.inforu_password || null
+    };
+  } catch (e) {
+    return { username: null, password: null };
+  }
 }
 
 // ==================== SMS ====================
@@ -307,13 +328,22 @@ async function sendVisitInviteWithButton(phone, params) {
 
 /**
  * Send WhatsApp chat message (only within 24h window)
+ * Supports per-campaign INFORU credentials via options.campaignId
  */
 async function sendWhatsAppChat(phone, message, options = {}) {
   const normalizedPhone = normalizePhoneLocal(phone);
   if (!normalizedPhone) throw new Error('Invalid phone number');
 
-  const customerMessageId = options.customerMessageId || `q_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const customerParameter = options.customerParameter || 'QUANTUM';
+  // Resolve campaign-specific credentials if campaignId provided
+  let campaignUsername = null, campaignPassword = null;
+  if (options.campaignId) {
+    const creds = await getCampaignCredentials(options.campaignId);
+    campaignUsername = creds.username;
+    campaignPassword = creds.password;
+  }
+
+  const customerMessageId = options.customerMessageId || `m_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const customerParameter = options.customerParameter || options.developerName || 'Minhelet';
 
   const payload = {
     Data: {
@@ -327,11 +357,11 @@ async function sendWhatsAppChat(phone, message, options = {}) {
     }
   };
 
-  logger.info('SendWhatsAppChat payload', { phone: normalizedPhone, messageLength: message.length, customerMessageId, fullPayload: JSON.stringify(payload) });
+  logger.info('SendWhatsAppChat payload', { phone: normalizedPhone, messageLength: message.length, customerMessageId, campaignId: options.campaignId || 'global', fullPayload: JSON.stringify(payload) });
 
   try {
     const response = await axios.post(`${INFORU_CAPI_BASE}/WhatsApp/SendWhatsAppChat`, payload, {
-      headers: { 'Content-Type': 'application/json', 'Authorization': getBasicAuth() },
+      headers: { 'Content-Type': 'application/json', 'Authorization': getBasicAuth(campaignUsername, campaignPassword) },
       timeout: 30000,
       validateStatus: () => true
     });

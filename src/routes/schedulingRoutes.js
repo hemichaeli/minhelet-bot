@@ -129,7 +129,7 @@ router.post('/webhook', async (req, res) => {
     }
 
     const reply = await botEngine.handleIncoming(From, Body, campaignId);
-    if (reply) await inforuService.sendWhatsApp(From, reply);
+    if (reply) await inforuService.sendWhatsAppChat(From, reply, { campaignId });
     res.sendStatus(200);
   } catch (err) {
     console.error('[Webhook] Error:', err);
@@ -198,7 +198,8 @@ router.put('/campaign/:campaignId', async (req, res) => {
       project_id, meeting_type, available_windows, slot_duration_minutes, buffer_minutes,
       reminder_delay_hours, bot_followup_delay_hours, pre_meeting_reminder_hours, morning_reminder_hours,
       wa_initial_template, wa_language, show_rep_name, booking_link_expires_hours,
-      default_start_time, default_end_time, generate_days_ahead
+      default_start_time, default_end_time, generate_days_ahead,
+      developer_name, inforu_username, inforu_password
     } = req.body;
 
     const windows = available_windows && available_windows.length > 0
@@ -219,8 +220,10 @@ router.put('/campaign/:campaignId', async (req, res) => {
           pre_meeting_reminder_hours, morning_reminder_hours,
           wa_initial_template, wa_language,
           show_rep_name, booking_link_expires_hours,
-          default_start_time, default_end_time, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
+          default_start_time, default_end_time,
+          developer_name, inforu_username, inforu_password,
+          updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW())
        ON CONFLICT (zoho_campaign_id) DO UPDATE SET
          project_id = EXCLUDED.project_id, meeting_type = EXCLUDED.meeting_type,
          available_windows = EXCLUDED.available_windows,
@@ -236,6 +239,9 @@ router.put('/campaign/:campaignId', async (req, res) => {
          booking_link_expires_hours = EXCLUDED.booking_link_expires_hours,
          default_start_time = EXCLUDED.default_start_time,
          default_end_time = EXCLUDED.default_end_time,
+         developer_name = COALESCE(EXCLUDED.developer_name, campaign_schedule_config.developer_name),
+         inforu_username = COALESCE(EXCLUDED.inforu_username, campaign_schedule_config.inforu_username),
+         inforu_password = COALESCE(EXCLUDED.inforu_password, campaign_schedule_config.inforu_password),
          updated_at = NOW()`,
       [
         campaignId, project_id || null, meeting_type || 'consultation', JSON.stringify(windows),
@@ -244,7 +250,8 @@ router.put('/campaign/:campaignId', async (req, res) => {
         pre_meeting_reminder_hours || 24, morning_reminder_hours || 2,
         wa_initial_template || '', wa_language || 'he',
         show_rep_name !== false, booking_link_expires_hours || 48,
-        default_start_time || '09:00', default_end_time || '18:00'
+        default_start_time || '09:00', default_end_time || '18:00',
+        developer_name || null, inforu_username || null, inforu_password || null
       ]
     );
 
@@ -430,13 +437,14 @@ router.post('/broadcast', async (req, res) => {
 function buildInitialMessage(contact, cfg, lang) {
   const template = cfg.wa_initial_template;
   if (template) return template.replace('{name}', contact.name).replace('{campaign}', cfg.zoho_campaign_id);
+  const devName = cfg.developer_name || 'Minhelet';
   const types = {
     he: { consultation:'פגישת ייעוץ', appraiser:'ביקור שמאי', signing_ceremony:'כנס חתימות', physical:'פגישה פיזית', surveyor:'ביקור מודד' },
     ru: { consultation:'консультация', appraiser:'визит оценщика', signing_ceremony:'церемония подписания', physical:'встреча в офисе', surveyor:'визит геодезиста' }
   };
   const typeLabel = (types[lang] || types.he)[cfg.meeting_type] || cfg.meeting_type;
-  if (lang === 'ru') return `Здравствуйте, ${contact.name} 👋\n\nQUANTUM на связи.\n\nГотовы назначить *${typeLabel}* для вашей квартиры.\n\nНажмите *1* и мы запишем вас прямо сейчас.`;
-  return `שלום ${contact.name} 👋\n\nQUANTUM כאן.\n\nאנחנו מוכנים לתאם *${typeLabel}* עבור דירתך.\n\nענה/י *1* ונתאם עכשיו.`;
+  if (lang === 'ru') return `Здравствуйте, ${contact.name} 👋\n\n${devName} на связи.\n\nГотовы назначить *${typeLabel}* для вашей квартиры.\n\nНажмите *1* и мы запишем вас прямо сейчас.`;
+  return `שלום ${contact.name} 👋\n\n${devName} כאן.\n\nאנחנו מוכנים לתאם *${typeLabel}* עבור דירתך.\n\nענה/י *1* ונתאם עכשיו.`;
 }
 
 // ══════════════════════════════════════════════════════════════

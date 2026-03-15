@@ -1,9 +1,11 @@
 /**
- * QUANTUM Bot Engine v5
+ * Minhelet Bot Engine v6
+ * - Dynamic branding: all messages use developer_name from the campaign
  * - Pre-registered sessions: building_address + apartment_number already populated
  * - Campaign validity: checks campaign_status + campaign_end_date before responding
- * - New state: select_building — when contact has no property_addresses
+ * - State: select_building — when contact has no property_addresses
  * - All meeting types (incl. professional visits) use visual booking link
+ * - Supports Hebrew and Russian
  */
 
 const pool = require('../db/pool');
@@ -12,58 +14,68 @@ const zoho = require('./zohoSchedulingService');
 const { logger } = require('./logger');
 const crypto = require('crypto');
 
-const BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : 'https://pinuy-binuy-analyzer-production.up.railway.app';
+const BASE_URL = process.env.BASE_URL ||
+  (process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : 'http://localhost:3002');
 
-const STRINGS = {
-  he: {
-    confirmIdentity: (name) => `שלום ${name} 👋\nאני הבוט של QUANTUM.\n\nרק לאימות - האם אתה/את ${name}?\n1️⃣ כן\n2️⃣ לא, מדובר בטעות`,
-    wrongPerson: `מצטערים על הבלבול. נשמח אם תעביר/י את ההודעה לבעל הדירה הרשום. תודה 🙏`,
-
-    selectBuilding: (buildings) => {
-      const list = buildings.map((b, i) => `${i + 1}️⃣ ${b}`).join('\n');
-      return `לפני שנמשיך — באיזה בניין נמצאת דירתך?\n\n${list}`;
+// ── Dynamic STRINGS — accept developer name as parameter ─────────────────────
+function getStrings(lang, developerName) {
+  const dev = developerName || 'המשרד שלנו';
+  const strings = {
+    he: {
+      confirmIdentity: (name) =>
+        `שלום ${name} 👋\nאני הבוט של ${dev}.\n\nרק לאימות - האם אתה/את ${name}?\n1️⃣ כן\n2️⃣ לא, מדובר בטעות`,
+      wrongPerson:
+        `מצטערים על הבלבול. נשמח אם תעביר/י את ההודעה לבעל הדירה הרשום. תודה 🙏`,
+      selectBuilding: (buildings) => {
+        const list = buildings.map((b, i) => `${i + 1}️⃣ ${b}`).join('\n');
+        return `לפני שנמשיך — באיזה בניין נמצאת דירתך?\n\n${list}`;
+      },
+      invalidBuildingChoice: (count) => `אנא בחר/י מספר בין 1 ל-${count}`,
+      ceremonyIntro: (name, ceremony) =>
+        `${name}, כנס החתימות לפרויקט *${ceremony.projectName}* יתקיים ב:\n📅 ${ceremony.dateStr}\n📍 ${ceremony.location}\n\nנשמח לראותך! האם תוכל/י להגיע?\n1️⃣ כן, אגיע\n2️⃣ לא אוכל להגיע\n3️⃣ עדיין לא יודע/ת`,
+      ceremonyDeclined:
+        `תודה שעדכנת אותנו. נציג שלנו ייצור איתך קשר בהקדם.`,
+      ceremonyMaybe:
+        `מובן. נחזור אליך קרוב לתאריך הכנס לאישור סופי.`,
+      bookingLink: (name, type, url) =>
+        `שלום ${name} 👋\n${dev} כאן.\n\nנשמח לתאם *${type}* עבור דירתך.\n\n📅 לבחירת מועד נוח - לחץ/י על הקישור:\n${url}\n\nהקישור תקף ל-48 שעות.`,
+      alreadyConfirmed: (date, time) =>
+        `✅ הפגישה שלך כבר נקבעה ל-${date} ⏰ ${time}.\n\nלשינויים - פנה/י ישירות לנציג ${dev}.`,
+      noSlots:
+        `כרגע אין חלונות זמן פנויים. נציג שלנו ייצור איתך קשר בהקדם.`,
+      campaignExpired: null, // silent
+      error: `אירעה שגיאה טכנית. אנא נסה/י שוב מאוחר יותר.`
     },
-    invalidBuildingChoice: (count) => `אנא בחר/י מספר בין 1 ל-${count}`,
-
-    ceremonyIntro: (name, ceremony) =>
-      `${name}, כנס החתימות לפרויקט *${ceremony.projectName}* יתקיים ב:\n📅 ${ceremony.dateStr}\n📍 ${ceremony.location}\n\nנשמח לראותך! האם תוכל/י להגיע?\n1️⃣ כן, אגיע\n2️⃣ לא אוכל להגיע\n3️⃣ עדיין לא יודע/ת`,
-    ceremonyDeclined: `תודה שעדכנת אותנו. נציג שלנו ייצור איתך קשר בהקדם.`,
-    ceremonyMaybe: `מובן. נחזור אליך קרוב לתאריך הכנס לאישור סופי.`,
-
-    bookingLink: (name, type, url) =>
-      `שלום ${name} 👋\nQUANTUM כאן.\n\nנשמח לתאם *${type}* עבור דירתך.\n\n📅 לבחירת מועד נוח - לחץ/י על הקישור:\n${url}\n\nהקישור תקף ל-48 שעות.`,
-
-    alreadyConfirmed: (date, time) => `✅ הפגישה שלך כבר נקבעה ל-${date} ⏰ ${time}.\n\nלשינויים - פנה/י ישירות לנציג QUANTUM.`,
-    noSlots: `כרגע אין חלונות זמן פנויים. נציג שלנו ייצור איתך קשר בהקדם.`,
-    campaignExpired: null,  // silent — do not respond
-    error: `אירעה שגיאה טכנית. אנא נסה/י שוב מאוחר יותר.`
-  },
-  ru: {
-    confirmIdentity: (name) => `Здравствуйте, ${name} 👋\nЯ бот QUANTUM.\n\nДля подтверждения - вы ${name}?\n1️⃣ Да\n2️⃣ Нет, это ошибка`,
-    wrongPerson: `Извините за беспокойство. Пожалуйста, передайте сообщение зарегистрированному владельцу квартиры. Спасибо 🙏`,
-
-    selectBuilding: (buildings) => {
-      const list = buildings.map((b, i) => `${i + 1}️⃣ ${b}`).join('\n');
-      return `Прежде чем продолжить — в каком здании находится ваша квартира?\n\n${list}`;
-    },
-    invalidBuildingChoice: (count) => `Пожалуйста, выберите число от 1 до ${count}`,
-
-    ceremonyIntro: (name, ceremony) =>
-      `${name}, церемония подписания проекта *${ceremony.projectName}*:\n📅 ${ceremony.dateStr}\n📍 ${ceremony.location}\n\nСможете прийти?\n1️⃣ Да, приду\n2️⃣ Не смогу\n3️⃣ Ещё не знаю`,
-    ceremonyDeclined: `Спасибо за уведомление. Наш представитель свяжется с вами в ближайшее время.`,
-    ceremonyMaybe: `Понятно. Мы свяжемся с вами ближе к дате церемонии.`,
-
-    bookingLink: (name, type, url) =>
-      `Здравствуйте, ${name} 👋\nQUANTUM на связи.\n\nГотовы назначить *${type}* для вашей квартиры.\n\n📅 Выберите удобное время по ссылке:\n${url}\n\nСсылка действует 48 часов.`,
-
-    alreadyConfirmed: (date, time) => `✅ Встреча уже назначена на ${date} ⏰ ${time}.\n\nДля изменений — обратитесь к представителю QUANTUM.`,
-    noSlots: `Свободных слотов нет. Наш представитель свяжется с вами в ближайшее время.`,
-    campaignExpired: null,
-    error: `Произошла техническая ошибка. Попробуйте позже.`
-  }
-};
+    ru: {
+      confirmIdentity: (name) =>
+        `Здравствуйте, ${name} 👋\nЯ бот ${dev}.\n\nДля подтверждения - вы ${name}?\n1️⃣ Да\n2️⃣ Нет, это ошибка`,
+      wrongPerson:
+        `Извините за беспокойство. Пожалуйста, передайте сообщение зарегистрированному владельцу квартиры. Спасибо 🙏`,
+      selectBuilding: (buildings) => {
+        const list = buildings.map((b, i) => `${i + 1}️⃣ ${b}`).join('\n');
+        return `Прежде чем продолжить — в каком здании находится ваша квартира?\n\n${list}`;
+      },
+      invalidBuildingChoice: (count) => `Пожалуйста, выберите число от 1 до ${count}`,
+      ceremonyIntro: (name, ceremony) =>
+        `${name}, церемония подписания проекта *${ceremony.projectName}*:\n📅 ${ceremony.dateStr}\n📍 ${ceremony.location}\n\nСможете прийти?\n1️⃣ Да, приду\n2️⃣ Не смогу\n3️⃣ Ещё не знаю`,
+      ceremonyDeclined:
+        `Спасибо за уведомление. Наш представитель свяжется с вами в ближайшее время.`,
+      ceremonyMaybe:
+        `Понятно. Мы свяжемся с вами ближе к дате церемонии.`,
+      bookingLink: (name, type, url) =>
+        `Здравствуйте, ${name} 👋\n${dev} на связи.\n\nГотовы назначить *${type}* для вашей квартиры.\n\n📅 Выберите удобное время по ссылке:\n${url}\n\nСсылка действует 48 часов.`,
+      alreadyConfirmed: (date, time) =>
+        `✅ Встреча уже назначена на ${date} ⏰ ${time}.\n\nДля изменений — обратитесь к представителю ${dev}.`,
+      noSlots:
+        `Свободных слотов нет. Наш представитель свяжется с вами в ближайшее время.`,
+      campaignExpired: null,
+      error: `Произошла техническая ошибка. Попробуйте позже.`
+    }
+  };
+  return strings[lang] || strings.he;
+}
 
 const MEETING_TYPE_LABELS = {
   he: {
@@ -107,7 +119,6 @@ class BotEngine {
 
   // ── Campaign validity ─────────────────────────────────
   isCampaignActive(session) {
-    // If not pre-registered, assume active (legacy campaigns)
     if (!session.campaign_status && !session.campaign_end_date) return true;
     if (session.campaign_status && session.campaign_status !== 'Active') return false;
     if (session.campaign_end_date) {
@@ -131,11 +142,13 @@ class BotEngine {
       const s = res.rows[0];
       s.context = typeof s.context === 'string' ? JSON.parse(s.context) : (s.context || {});
       s.campaign_buildings = s.campaign_buildings || [];
+
       // If pre-registered (state='waiting'), transition to confirm_identity
       if (s.state === 'waiting') {
         s.state = 'confirm_identity';
-        const confirmMsg = STRINGS[s.language || 'he'].confirmIdentity(s.context?.contactName || 'שלום');
-        await inforuService.sendWhatsAppChat(phone, confirmMsg);
+        const S = getStrings(s.language || 'he', s.developer_name);
+        const confirmMsg = S.confirmIdentity(s.context?.contactName || 'שלום');
+        await inforuService.sendWhatsAppChat(phone, confirmMsg, s.inforu_business_line);
         await pool.query(
           `UPDATE bot_sessions SET state='confirm_identity', last_message_at=NOW()
            WHERE phone=$1 AND zoho_campaign_id IS NOT DISTINCT FROM $2`,
@@ -146,6 +159,21 @@ class BotEngine {
     }
 
     // No pre-registration found — create fresh session (legacy path)
+    // Look up developer_name and inforu_business_line from campaign_schedule_config
+    let developerName = null, inforuBusinessLine = null;
+    try {
+      const cfgRes = await pool.query(
+        `SELECT developer_name, inforu_business_line FROM campaign_schedule_config WHERE zoho_campaign_id=$1`,
+        [campaignId]
+      );
+      if (cfgRes.rows.length > 0) {
+        developerName = cfgRes.rows[0].developer_name;
+        inforuBusinessLine = cfgRes.rows[0].inforu_business_line;
+      }
+    } catch (e) {
+      logger.warn('[BotEngine] Could not load campaign config for branding:', e.message);
+    }
+
     let contactId = null, contactName = '', lang = 'he';
     try {
       const contact = await zoho.findContactByPhone(phone);
@@ -163,18 +191,21 @@ class BotEngine {
 
     const ins = await pool.query(`
       INSERT INTO bot_sessions
-        (phone, zoho_contact_id, zoho_campaign_id, language, state, context)
-      VALUES ($1,$2,$3,$4,'confirm_identity',$5)
+        (phone, zoho_contact_id, zoho_campaign_id, language, state, context,
+         developer_name, inforu_business_line)
+      VALUES ($1,$2,$3,$4,'confirm_identity',$5,$6,$7)
       RETURNING *
-    `, [phone, contactId, campaignId, lang, JSON.stringify({ contactName })]);
+    `, [phone, contactId, campaignId, lang, JSON.stringify({ contactName }),
+        developerName, inforuBusinessLine]);
 
     const s = ins.rows[0];
     s.context = { contactName };
     s.campaign_buildings = [];
     this._zohoStatus(s, 'bot_sent').catch(() => {});
 
-    const confirmMsg = STRINGS[lang].confirmIdentity(contactName || 'שלום');
-    await inforuService.sendWhatsAppChat(phone, confirmMsg);
+    const S = getStrings(lang, developerName);
+    const confirmMsg = S.confirmIdentity(contactName || 'שלום');
+    await inforuService.sendWhatsAppChat(phone, confirmMsg, inforuBusinessLine);
 
     return s;
   }
@@ -194,7 +225,7 @@ class BotEngine {
   // ── STATE MACHINE ─────────────────────────────────────
   async processState(session, msg) {
     const lang = session.language || 'he';
-    const S = STRINGS[lang];
+    const S = getStrings(lang, session.developer_name);
     const ctx = session.context;
     const state = session.state;
 
@@ -225,7 +256,6 @@ class BotEngine {
           return S.ceremonyIntro(ctx.contactName || '', ceremony);
         }
 
-        // Professional visit types — check if building is known
         if (['appraiser', 'surveyor'].includes(config.meeting_type)) {
           return await this._handleProfessionalVisitFlow(session, config, lang, S);
         }
@@ -248,14 +278,12 @@ class BotEngine {
         const selectedBuilding = buildings[choice - 1];
         session.building_address = selectedBuilding;
 
-        // Persist building choice
         await pool.query(
           `UPDATE bot_sessions SET building_address=$1, last_message_at=NOW()
            WHERE phone=$2 AND zoho_campaign_id IS NOT DISTINCT FROM $3`,
           [selectedBuilding, session.phone, session.zoho_campaign_id]
         );
 
-        // Also update property_addresses in Zoho CRM
         if (session.zoho_contact_id) {
           zoho.updateContactField(session.zoho_contact_id, 'property_addresses', selectedBuilding)
             .catch(e => logger.warn('[BotEngine] Zoho field update failed:', e.message));
@@ -290,19 +318,15 @@ class BotEngine {
 
   // ── Professional visit flow ───────────────────────────
   async _handleProfessionalVisitFlow(session, config, lang, S) {
-    // If building is known (from pre-register) — go directly to booking
     if (session.building_address) {
       return await this._sendBookingLink(session, config, lang, S);
     }
 
-    // No building — ask contact to choose
     const buildings = session.campaign_buildings || [];
     if (buildings.length === 0) {
-      // No buildings defined — fallback to generic booking
       return await this._sendBookingLink(session, config, lang, S);
     }
     if (buildings.length === 1) {
-      // Only one building — set it automatically
       session.building_address = buildings[0];
       await pool.query(
         `UPDATE bot_sessions SET building_address=$1 WHERE phone=$2 AND zoho_campaign_id IS NOT DISTINCT FROM $3`,
@@ -445,7 +469,8 @@ class BotEngine {
             JSON.stringify({
               meetingDatetime,
               language: session.language,
-              contactName: session.context?.contactName || ''
+              contactName: session.context?.contactName || '',
+              developerName: session.developer_name || ''
             })]);
       }
     }
