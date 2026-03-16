@@ -66,9 +66,36 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// GET /api/activities/by-campaign/:campaignId — get activity linked to a campaign
+router.get('/by-campaign/:campaignId', async (req, res) => {
+  const { campaignId } = req.params;
+  try {
+    const actRes = await pool.query(
+      `SELECT * FROM activities WHERE campaign_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [campaignId]
+    );
+    if (!actRes.rows.length) return res.status(404).json({ error: 'No activity for this campaign' });
+    const activity = actRes.rows[0];
+
+    // Get professionals linked to this activity
+    const profRes = await pool.query(`
+      SELECT DISTINCT p.id, p.name, p.type, p.phone_number, p.dashboard_token
+      FROM activity_assignments aa
+      JOIN professionals p ON p.id = aa.professional_id
+      WHERE aa.activity_id = $1
+      ORDER BY p.type, p.name
+    `, [activity.id]);
+
+    res.json({ activity, professionals: profRes.rows });
+  } catch (err) {
+    logger.error('[Activities] by-campaign error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/activities — create new activity + Google Calendar
 router.post('/', async (req, res) => {
-  const { name, type } = req.body;
+  const { name, type, campaign_id } = req.body;
   if (!name || !type) return res.status(400).json({ error: 'name and type are required' });
 
   const validTypes = ['signing', 'appraisal', 'measurement', 'other'];
@@ -88,10 +115,10 @@ router.post('/', async (req, res) => {
     }
 
     const r = await pool.query(`
-      INSERT INTO activities (name, type, google_calendar_id, status)
-      VALUES ($1, $2, $3, 'active')
+      INSERT INTO activities (name, type, google_calendar_id, status, campaign_id)
+      VALUES ($1, $2, $3, 'active', $4)
       RETURNING *
-    `, [name.trim(), type, googleCalendarId]);
+    `, [name.trim(), type, googleCalendarId, campaign_id || null]);
 
     res.status(201).json({ success: true, activity: r.rows[0], calendar_created: !!googleCalendarId });
   } catch (err) {
@@ -264,6 +291,53 @@ router.delete('/professionals/:id', async (req, res) => {
 // ASSIGNMENTS (activity ↔ professional ↔ building)
 // ════════════════════════════════════════════════════════════
 
+// GET /api/activities/:id/professionals — list professionals linked to activity
+router.get('/:id/professionals', async (req, res) => {
+  const activityId = parseInt(req.params.id);
+  if (isNaN(activityId)) return res.status(400).json({ error: 'Invalid id' });
+  try {
+    const r = await pool.query(`
+      SELECT DISTINCT p.id, p.name, p.type, p.phone_number, p.dashboard_token
+      FROM activity_assignments aa
+      JOIN professionals p ON p.id = aa.professional_id
+      WHERE aa.activity_id = $1
+      ORDER BY p.type, p.name
+    `, [activityId]);
+    res.json({ professionals: r.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/activities/:id/professionals — link existing professional to activity
+router.post('/:id/professionals', async (req, res) => {
+  const activityId = parseInt(req.params.id);
+  if (isNaN(activityId)) return res.status(400).json({ error: 'Invalid id' });
+  const { professional_id } = req.body;
+  if (!professional_id) return res.status(400).json({ error: 'professional_id required' });
+  try {
+    // Add a placeholder assignment (no specific building yet — will be auto-assigned later)
+    const r = await pool.query(`
+      INSERT INTO activity_assignments (activity_id, professional_id, building_id)
+      VALUES ($1, $2, '__unassigned__')
+      ON CONFLICT (activity_id, professional_id, building_id) DO NOTHING
+      RETURNING *
+    `, [activityId, professional_id]);
+    res.status(201).json({ success: true, assignment: r.rows[0] || 'already linked' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/activities/:id/professionals/:profId — unlink professional from activity
+router.delete('/:id/professionals/:profId', async (req, res) => {
+  const activityId = parseInt(req.params.id);
+  const profId = parseInt(req.params.profId);
+  try {
+    await pool.query(
+      `DELETE FROM activity_assignments WHERE activity_id = $1 AND professional_id = $2`,
+      [activityId, profId]
+    );
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // POST /api/activities/:id/assign — assign professional to building in activity
 router.post('/:id/assign', async (req, res) => {
   const activityId = parseInt(req.params.id);
@@ -302,9 +376,30 @@ router.delete('/:id/assign', async (req, res) => {
 router.post('/:id/auto-assign', async (req, res) => {
   const activityId = parseInt(req.params.id);
   if (isNaN(activityId)) return res.status(400).json({ error: 'Invalid activity id' });
-  const { professional_ids, building_ids } = req.body;
+  let { professional_ids, building_ids } = req.body;
+
+  // If not provided, auto-fetch from DB
+  if (!professional_ids?.length) {
+    const profRes = await pool.query(
+      `SELECT DISTINCT professional_id FROM activity_assignments WHERE activity_id = $1`,
+      [activityId]
+    );
+    professional_ids = profRes.rows.map(r => r.professional_id);
+  }
+  if (!building_ids?.length) {
+    // Try to get buildings from the campaign linked to this activity
+    const actRes = await pool.query(`SELECT campaign_id FROM activities WHERE id = $1`, [activityId]);
+    if (actRes.rows[0]?.campaign_id) {
+      try {
+        const zohoSvc = require('../services/zohoSchedulingService');
+        const contacts = await zohoSvc.getCampaignContacts(actRes.rows[0].campaign_id);
+        const uniqueBuildings = [...new Set(contacts.map(c => c.building_id).filter(Boolean))];
+        building_ids = uniqueBuildings;
+      } catch (e) { /* ignore */ }
+    }
+  }
   if (!professional_ids?.length || !building_ids?.length) {
-    return res.status(400).json({ error: 'professional_ids and building_ids arrays required' });
+    return res.status(400).json({ error: 'No professionals or buildings found for auto-assign. Provide professional_ids and building_ids in the request body.' });
   }
   try {
     // Round-robin assignment: distribute buildings evenly across professionals

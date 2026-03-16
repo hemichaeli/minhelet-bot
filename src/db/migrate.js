@@ -193,6 +193,15 @@ async function runMigrations() {
       WHERE dashboard_token IS NULL
     `);
 
+    // ── migration 004: add campaign_id to activities ──
+    await client.query(`
+      ALTER TABLE activities
+        ADD COLUMN IF NOT EXISTS campaign_id TEXT
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_activities_campaign_id ON activities(campaign_id)
+    `);
+
     logger.info('[Migration] All migrations completed successfully.');
   } catch (err) {
     logger.error('[Migration] Migration failed:', err.message);
