@@ -175,8 +175,14 @@ router.get('/', async (req, res) => {
 // POST /api/appointments/send-slots — send available slots via WhatsApp to a lead
 router.post('/send-slots', async (req, res) => {
   try {
-    const { phone, leadName, leadId } = req.body;
+    const { phone, leadName, leadId, activityId, buildingId, buildingName } = req.body;
     if (!phone) return res.status(400).json({ success: false, error: 'phone required' });
+
+    // Generate unique token for this appointment
+    const crypto = require('crypto');
+    const appointmentToken = crypto.randomBytes(16).toString('hex');
+    const BASE_URL = process.env.BASE_URL || 'https://minhelet-bot-production.up.railway.app';
+    const rescheduleLink = `${BASE_URL}/reschedule.html?token=${appointmentToken}`;
 
     // Get available slots
     const { rows: slots } = await pool.query(`
@@ -190,22 +196,23 @@ router.post('/send-slots', async (req, res) => {
       return res.status(400).json({ success: false, error: 'No available slots. Add slots first.' });
     }
 
-    // Build WhatsApp message
+    // Build WhatsApp message with reschedule link
     const slotsText = slots.map((s, i) => `${i + 1}. ${formatSlotForWhatsApp(s)}`).join('\n');
-    const message = `שלום${leadName ? ' ' + leadName : ''},\nנשמח לקיים איתך שיחת ייעוץ קצרה בנושא נכסך.\n\nהזמנים הפנויים אצלנו:\n${slotsText}\n\nאיזה זמן מתאים לך? פשוט ענה/י עם המספר הרצוי 😊`;
+    const message = `שלום${leadName ? ' ' + leadName : ''},\nמינהלת כאן. אנחנו מכינים לתאם איתך פגישה${buildingName ? ' בנוגע ל' + buildingName : ''}.\n\nהזמנים הפנויים:\n${slotsText}\n\nלאישור, ביטול או תיאום מחדש — לחץ כאן:\n${rescheduleLink}`;
 
     // Send WhatsApp
     const waResult = await sendWhatsApp(phone, message);
 
-    // Create appointment record (status: whatsapp_sent)
+    // Create appointment record with token
     const { rows: [appointment] } = await pool.query(
-      `INSERT INTO appointments (phone, lead_name, lead_id, status, whatsapp_message_id, created_at)
-       VALUES ($1, $2, $3, 'whatsapp_sent', $4, NOW())
+      `INSERT INTO appointments (phone, lead_name, lead_id, status, whatsapp_message_id, appointment_token, activity_id, building_id, building_name, created_at)
+       VALUES ($1, $2, $3, 'whatsapp_sent', $4, $5, $6, $7, $8, NOW())
        RETURNING *`,
-      [phone, leadName || null, leadId || null, waResult?.data?.MessageId || null]
+      [phone, leadName || null, leadId || null, waResult?.data?.MessageId || null,
+       appointmentToken, activityId || null, buildingId || null, buildingName || null]
     );
 
-    res.json({ success: true, appointment, waResult, slots, message });
+    res.json({ success: true, appointment, waResult, slots, message, rescheduleLink });
   } catch (e) {
     console.error('[Appointments] send-slots error:', e.message);
     res.status(500).json({ success: false, error: e.message });
@@ -341,6 +348,134 @@ router.get('/stats', async (req, res) => {
     res.json({ success: true, stats: { ...stats, ...slotStats } });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ── Tenant-facing endpoints (by appointment_token) ──────────────────────────
+// Each appointment gets a unique token when created; the token is sent in the WhatsApp confirmation link.
+
+// Ensure appointment_token column exists (idempotent)
+async function ensureTokenColumn() {
+  await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS appointment_token TEXT UNIQUE`);
+  await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS activity_id INTEGER`);
+  await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS building_id TEXT`);
+  await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS building_name TEXT`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_appointments_token ON appointments(appointment_token)`);
+}
+ensureTokenColumn().catch(e => console.warn('[Appointments] token column:', e.message));
+
+// GET /api/appointments/slots/available — available slots for tenant reschedule page
+router.get('/slots/available', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT id, slot_date, slot_time, label
+      FROM appointment_slots
+      WHERE is_available = true AND slot_date >= CURRENT_DATE
+      ORDER BY slot_date ASC, slot_time ASC
+      LIMIT 12
+    `);
+    res.json({ success: true, slots: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/appointments/by-token/:token — load appointment details for tenant page
+router.get('/by-token/:token', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        a.id, a.phone, a.lead_name, a.status, a.appointment_token,
+        a.building_id, a.building_name, a.activity_id,
+        s.slot_date, s.slot_time,
+        (s.slot_date::text || ' ' || s.slot_time::text) AS slot_datetime,
+        act.type AS activity_type
+      FROM appointments a
+      LEFT JOIN appointment_slots s ON a.slot_id = s.id
+      LEFT JOIN activities act ON a.activity_id = act.id
+      WHERE a.appointment_token = $1
+    `, [req.params.token]);
+    if (!rows.length) return res.status(404).json({ error: 'לא נמצאה פגישה עם הקישור הזה.' });
+    res.json(rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/appointments/by-token/:token/confirm
+router.post('/by-token/:token/confirm', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE appointments SET status = 'confirmed', confirmed_at = NOW()
+       WHERE appointment_token = $1
+         AND status NOT IN ('cancelled','arrived','no-show')
+       RETURNING *`,
+      [req.params.token]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'לא ניתן לאשר — הפגישה לא נמצאה או כבר בוטלה.' });
+    const appt = rows[0];
+    if (appt.slot_id) {
+      const { rows: [slot] } = await pool.query('SELECT * FROM appointment_slots WHERE id = $1', [appt.slot_id]);
+      if (slot) {
+        const msg = `✅ אישרת הגעה לפגישה ל${formatSlotForWhatsApp(slot)}.\nנשמח לראותך! צוות מינהלת`;
+        sendWhatsApp(appt.phone, msg).catch(e => console.warn('[Tenant confirm WA]', e.message));
+      }
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/appointments/by-token/:token/cancel
+router.post('/by-token/:token/cancel', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE appointments SET status = 'cancelled', cancelled_at = NOW()
+       WHERE appointment_token = $1
+         AND status NOT IN ('cancelled','arrived')
+       RETURNING *`,
+      [req.params.token]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'לא ניתן לבטל — הפגישה לא נמצאה או כבר בוטלה.' });
+    const appt = rows[0];
+    if (appt.slot_id) {
+      await pool.query('UPDATE appointment_slots SET is_available = true WHERE id = $1', [appt.slot_id]);
+    }
+    const msg = `❌ הפגישה בוטלה. אם תרצה לתאם מחדש, פנה אלינו. צוות מינהלת`;
+    sendWhatsApp(appt.phone, msg).catch(e => console.warn('[Tenant cancel WA]', e.message));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/appointments/by-token/:token/reschedule
+router.post('/by-token/:token/reschedule', async (req, res) => {
+  try {
+    const { slot_id } = req.body;
+    if (!slot_id) return res.status(400).json({ error: 'חסר slot_id.' });
+    const { rows: [slot] } = await pool.query(
+      'SELECT * FROM appointment_slots WHERE id = $1 AND is_available = true', [slot_id]
+    );
+    if (!slot) return res.status(400).json({ error: 'המועד שנבחר אינו פנוי יותר.' });
+    const { rows: [appt] } = await pool.query(
+      'SELECT * FROM appointments WHERE appointment_token = $1', [req.params.token]
+    );
+    if (!appt) return res.status(404).json({ error: 'פגישה לא נמצאה.' });
+    if (appt.slot_id) {
+      await pool.query('UPDATE appointment_slots SET is_available = true WHERE id = $1', [appt.slot_id]);
+    }
+    await pool.query(
+      `UPDATE appointments SET slot_id = $1, status = 'rescheduled', confirmed_at = NOW() WHERE id = $2`,
+      [slot_id, appt.id]
+    );
+    await pool.query('UPDATE appointment_slots SET is_available = false WHERE id = $1', [slot_id]);
+    const msg = `🔄 הפגישה תואמה מחדש ל${formatSlotForWhatsApp(slot)}.\nנשמח לראותך! צוות מינהלת`;
+    sendWhatsApp(appt.phone, msg).catch(e => console.warn('[Tenant reschedule WA]', e.message));
+    res.json({ success: true, slot_datetime: `${slot.slot_date} ${slot.slot_time}` });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
