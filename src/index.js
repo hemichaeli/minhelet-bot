@@ -35,7 +35,7 @@ app.get('/health', (req, res) => {
     env: {
       inforu: !!(process.env.INFORU_USERNAME && process.env.INFORU_PASSWORD),
       zoho: !!(process.env.ZOHO_CLIENT_ID && process.env.ZOHO_REFRESH_TOKEN),
-      google_calendar: !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
+      google_calendar: !!(process.env.GOOGLE_SA_EMAIL && process.env.GOOGLE_SA_PRIVATE_KEY),
       db: !!process.env.DATABASE_URL,
     },
   });
