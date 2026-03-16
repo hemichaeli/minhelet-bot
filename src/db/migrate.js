@@ -204,7 +204,7 @@ async function runMigrations() {
 
     logger.info('[Migration] All migrations completed successfully.');
   } catch (err) {
-    logger.error('[Migration] Migration failed:', err.message);
+    logger.error('[Migration] Migration failed:', err.message, err.stack);
     // Don't throw — allow server to start even if migration fails
   } finally {
     client.release();
