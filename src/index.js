@@ -21,9 +21,12 @@ const cron = require('node-cron');
 const { logger } = require('./services/logger');
 const { runMigrations } = require('./db/migrate');
 
+const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Serve static files (professional dashboard, booking pages)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -49,6 +52,7 @@ app.use('/api/appointments',require('./routes/appointmentRoutes'));
 app.use('/api/scheduling',  require('./routes/schedulingRoutes'));
 app.use('/api/calendar',    require('./routes/calendarRoutes'));
 app.use('/api/events',      require('./routes/eventSchedulerRoutes'));
+app.use('/api/activities',  require('./routes/activitiesRoutes'));
 
 // ── Scheduled Jobs ────────────────────────────────────────────────────────────
 

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח זמנים — הדפסה</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f0; color: #1a2e1a; direction: rtl; }
+    .no-print { }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; }
+      .page-break { page-break-before: always; }
+    }
+    .header {
+      background: linear-gradient(135deg, #1b4332, #40916c);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .header p { font-size: 13px; opacity: 0.85; }
+    .toolbar {
+      background: white;
+      padding: 12px 24px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .toolbar select, .toolbar input {
+      padding: 7px 12px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      direction: rtl;
+    }
+    .toolbar select:focus, .toolbar input:focus { outline: none; border-color: #2d6a4f; }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-print { background: #1b4332; color: white; }
+    .btn-print:hover { background: #2d6a4f; }
+    .btn-filter { background: #d1fae5; color: #065f46; }
+    .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+    .view-all-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .building-section {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .building-header {
+      background: #1b4332;
+      color: white;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .building-header .prof-tag {
+      background: rgba(255,255,255,0.2);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin-right: auto;
+    }
+    .appt-row {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .appt-row:last-child { border-bottom: none; }
+    .appt-row .time { font-size: 15px; font-weight: 700; color: #1b4332; min-width: 50px; }
+    .appt-row .name { font-size: 13px; font-weight: 600; flex: 1; }
+    .appt-row .phone { font-size: 12px; color: #888; }
+    .appt-row .apt { font-size: 11px; color: #aaa; }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-pending { background: #94a3b8; }
+    .dot-confirmed { background: #3b82f6; }
+    .dot-arrived { background: #22c55e; }
+    .dot-no-show { background: #ef4444; }
+    .dot-rescheduled { background: #f59e0b; }
+    .empty-building { padding: 16px; text-align: center; color: #aaa; font-size: 13px; }
+    .summary-bar {
+      background: white;
+      padding: 12px 24px;
+      display: flex;
+      gap: 20px;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+    .summary-bar .stat { display: flex; align-items: center; gap: 6px; }
+    .summary-bar .num { font-size: 18px; font-weight: 700; color: #1b4332; }
+    .print-date { font-size: 11px; color: #aaa; margin-right: auto; }
+    .loading { text-align: center; padding: 60px; color: #888; }
+    .spinner {
+      display: inline-block;
+      width: 32px; height: 32px;
+      border: 3px solid #d1fae5;
+      border-top-color: #2d6a4f;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .single-view .appt-row { padding: 12px 16px; }
+    .single-view .appt-row .time { font-size: 17px; }
+    .single-view .appt-row .name { font-size: 14px; }
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      align-items: center;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:26px">🖨️</span>
+  <div>
+    <h1 id="pageTitle">לוח זמנים</h1>
+    <p id="pageSubtitle"></p>
+  </div>
+</div>
+
+<div class="toolbar no-print">
+  <select id="filterBy" onchange="applyFilter()">
+    <option value="all">כל הבניינים</option>
+    <option value="building">לפי בניין</option>
+    <option value="professional">לפי איש מקצוע</option>
+  </select>
+  <select id="filterValue" style="display:none" onchange="applyFilter()">
+    <option value="">בחר...</option>
+  </select>
+  <select id="viewMode" onchange="renderSchedule()">
+    <option value="grid">תצוגת רשת</option>
+    <option value="list">תצוגת רשימה</option>
+  </select>
+  <div class="legend">
+    <div class="legend-item"><div class="status-dot dot-pending"></div>ממתין</div>
+    <div class="legend-item"><div class="status-dot dot-arrived"></div>הגיע</div>
+    <div class="legend-item"><div class="status-dot dot-no-show"></div>לא הגיע</div>
+    <div class="legend-item"><div class="status-dot dot-rescheduled"></div>תואם מחדש</div>
+  </div>
+  <button class="btn btn-print" onclick="window.print()">🖨️ הדפס / שמור PDF</button>
+</div>
+
+<div id="summaryBar" class="summary-bar" style="display:none"></div>
+
+<div class="container">
+  <div id="scheduleContent" class="loading">
+    <div><div class="spinner"></div><br>טוען לוח זמנים...</div>
+  </div>
+</div>
+
+<script>
+const ACTIVITIES_API = '/api/activities';
+let scheduleData = null;
+let activityId = null;
+let activityName = '';
+
+const STATUS_DOT = {
+  pending: 'dot-pending',
+  confirmed: 'dot-confirmed',
+  arrived: 'dot-arrived',
+  'no-show': 'dot-no-show',
+  rescheduled: 'dot-rescheduled'
+};
+
+const PROF_TYPE_LABELS = { appraiser: 'שמאי', surveyor: 'מודד', lawyer: 'עורך דין', other: 'אחר' };
+
+function formatTime(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+}
+function formatDate(dt) {
+  if (!dt) return '';
+  return new Date(dt).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', weekday: 'short' });
+}
+
+async function loadSchedule() {
+  const params = new URLSearchParams(window.location.search);
+  activityId = params.get('activityId');
+  activityName = params.get('activityName') || 'לוח זמנים';
+
+  document.getElementById('pageTitle').textContent = activityName;
+  document.title = `הדפסה — ${activityName}`;
+
+  if (!activityId) {
+    document.getElementById('scheduleContent').innerHTML = '<div style="color:#e74c3c;text-align:center;padding:40px">חסר מזהה פעילות</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${ACTIVITIES_API}/${activityId}/schedule`);
+    scheduleData = await res.json();
+
+    document.getElementById('pageSubtitle').textContent =
+      `${scheduleData.total} פגישות | ${new Date().toLocaleDateString('he-IL')}`;
+
+    // Build filter options
+    buildFilterOptions();
+    renderSummary();
+    renderSchedule();
+  } catch (err) {
+    document.getElementById('scheduleContent').innerHTML =
+      `<div style="color:#e74c3c;text-align:center;padding:40px">שגיאה: ${err.message}</div>`;
+  }
+}
+
+function buildFilterOptions() {
+  if (!scheduleData) return;
+  const buildings = [...new Set(scheduleData.appointments.map(a => a.building_id).filter(Boolean))];
+  const professionals = [...new Map(
+    scheduleData.appointments
+      .filter(a => a.professional_name)
+      .map(a => [a.professional_name, a])
+  ).values()];
+
+  // Store for filter
+  window._buildings = buildings;
+  window._professionals = professionals;
+}
+
+function applyFilter() {
+  const filterBy = document.getElementById('filterBy').value;
+  const filterValueEl = document.getElementById('filterValue');
+
+  if (filterBy === 'all') {
+    filterValueEl.style.display = 'none';
+    renderSchedule();
+    return;
+  }
+
+  filterValueEl.style.display = '';
+  filterValueEl.innerHTML = '<option value="">בחר...</option>';
+
+  if (filterBy === 'building') {
+    (window._buildings || []).forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b; opt.textContent = `🏢 ${b}`;
+      filterValueEl.appendChild(opt);
+    });
+  } else if (filterBy === 'professional') {
+    (window._professionals || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.professional_name;
+      opt.textContent = `👤 ${p.professional_name} (${PROF_TYPE_LABELS[p.professional_type] || p.professional_type})`;
+      filterValueEl.appendChild(opt);
+    });
+  }
+  renderSchedule();
+}
+
+function getFilteredAppointments() {
+  if (!scheduleData) return [];
+  const filterBy = document.getElementById('filterBy').value;
+  const filterValue = document.getElementById('filterValue').value;
+  let appts = scheduleData.appointments;
+  if (filterBy === 'building' && filterValue) appts = appts.filter(a => a.building_id === filterValue);
+  if (filterBy === 'professional' && filterValue) appts = appts.filter(a => a.professional_name === filterValue);
+  return appts;
+}
+
+function renderSummary() {
+  if (!scheduleData) return;
+  const appts = scheduleData.appointments;
+  const bar = document.getElementById('summaryBar');
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <div class="stat"><span class="num">${appts.length}</span> סה"כ פגישות</div>
+    <div class="stat"><span class="num" style="color:#22c55e">${appts.filter(a=>a.status==='arrived').length}</span> הגיעו</div>
+    <div class="stat"><span class="num" style="color:#ef4444">${appts.filter(a=>a.status==='no-show').length}</span> לא הגיעו</div>
+    <div class="stat"><span class="num" style="color:#94a3b8">${appts.filter(a=>!a.status||a.status==='pending').length}</span> ממתינים</div>
+    <div class="print-date">הודפס: ${new Date().toLocaleString('he-IL')}</div>
+  `;
+}
+
+function renderSchedule() {
+  const viewMode = document.getElementById('viewMode').value;
+  const appts = getFilteredAppointments();
+  const container = document.getElementById('scheduleContent');
+
+  if (!appts.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#888">אין פגישות להצגה</div>';
+    return;
+  }
+
+  if (viewMode === 'grid') {
+    renderGrid(appts, container);
+  } else {
+    renderList(appts, container);
+  }
+}
+
+function renderGrid(appts, container) {
+  // Group by building
+  const byBuilding = {};
+  appts.forEach(a => {
+    const key = a.building_id || 'ללא בניין';
+    if (!byBuilding[key]) byBuilding[key] = { prof: a.professional_name, type: a.professional_type, appts: [] };
+    byBuilding[key].appts.push(a);
+  });
+
+  container.className = 'view-all-grid';
+  container.innerHTML = Object.entries(byBuilding).map(([building, data]) => `
+    <div class="building-section">
+      <div class="building-header">
+        🏢 ${building}
+        ${data.prof ? `<span class="prof-tag">👤 ${data.prof}</span>` : ''}
+      </div>
+      ${data.appts.length ? data.appts.sort((a,b) => new Date(a.slot_datetime) - new Date(b.slot_datetime)).map(a => `
+        <div class="appt-row">
+          <div class="status-dot ${STATUS_DOT[a.status] || 'dot-pending'}"></div>
+          <div class="time">${formatTime(a.slot_datetime)}</div>
+          <div>
+            <div class="name">${a.contact_name || '—'}</div>
+            <div class="phone">${a.contact_phone || ''}${a.apartment_number ? ` | דירה ${a.apartment_number}` : ''}</div>
+            <div class="apt">${formatDate(a.slot_datetime)}</div>
+          </div>
+        </div>
+      `).join('') : '<div class="empty-building">אין פגישות</div>'}
+    </div>
+  `).join('');
+}
+
+function renderList(appts, container) {
+  const sorted = [...appts].sort((a,b) => new Date(a.slot_datetime) - new Date(b.slot_datetime));
+  container.className = 'single-view';
+  container.innerHTML = `
+    <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07)">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#1b4332;color:white">
+            <th style="padding:10px 14px;text-align:right">תאריך ושעה</th>
+            <th style="padding:10px 14px;text-align:right">שם</th>
+            <th style="padding:10px 14px;text-align:right">טלפון</th>
+            <th style="padding:10px 14px;text-align:right">בניין</th>
+            <th style="padding:10px 14px;text-align:right">דירה</th>
+            <th style="padding:10px 14px;text-align:right">איש מקצוע</th>
+            <th style="padding:10px 14px;text-align:right">סטטוס</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map((a, i) => `
+            <tr style="background:${i%2===0?'white':'#f9fafb'};border-bottom:1px solid #eee">
+              <td style="padding:9px 14px">${formatDate(a.slot_datetime)} ${formatTime(a.slot_datetime)}</td>
+              <td style="padding:9px 14px;font-weight:600">${a.contact_name || '—'}</td>
+              <td style="padding:9px 14px;direction:ltr">${a.contact_phone || '—'}</td>
+              <td style="padding:9px 14px">${a.building_id || '—'}</td>
+              <td style="padding:9px 14px">${a.apartment_number || '—'}</td>
+              <td style="padding:9px 14px">${a.professional_name || '—'}</td>
+              <td style="padding:9px 14px">
+                <div style="display:flex;align-items:center;gap:5px">
+                  <div class="status-dot ${STATUS_DOT[a.status] || 'dot-pending'}"></div>
+                  ${a.status || 'ממתין'}
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+loadSchedule();
+</script>
+</body>
+</html>

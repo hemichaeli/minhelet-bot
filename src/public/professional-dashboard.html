@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח זמנים — מינהלת</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f0;
+      color: #1a2e1a;
+      direction: rtl;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%);
+      color: white;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .header-icon { font-size: 28px; }
+    .header-title { flex: 1; }
+    .header-title h1 { font-size: 20px; font-weight: 700; }
+    .header-title p { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+    .header-badge {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-top: 3px solid #2d6a4f;
+    }
+    .summary-card .num { font-size: 30px; font-weight: 700; color: #2d6a4f; }
+    .summary-card .lbl { font-size: 12px; color: #888; margin-top: 4px; }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1b4332;
+      margin: 20px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .count-badge {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    .appt-card {
+      background: white;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      border-right: 4px solid #2d6a4f;
+      transition: box-shadow 0.2s;
+    }
+    .appt-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.12); }
+    .appt-card.status-arrived { border-right-color: #27ae60; background: #f0fff4; }
+    .appt-card.status-no-show { border-right-color: #e74c3c; background: #fff5f5; opacity: 0.8; }
+    .appt-card.status-rescheduled { border-right-color: #f39c12; background: #fffbf0; }
+    .appt-time {
+      min-width: 60px;
+      text-align: center;
+    }
+    .appt-time .time { font-size: 18px; font-weight: 700; color: #1b4332; }
+    .appt-time .date { font-size: 11px; color: #888; margin-top: 2px; }
+    .appt-info { flex: 1; }
+    .appt-name { font-size: 15px; font-weight: 600; color: #1a2e1a; }
+    .appt-details { font-size: 12px; color: #666; margin-top: 4px; }
+    .appt-building { font-size: 12px; color: #2d6a4f; font-weight: 500; margin-top: 3px; }
+    .appt-actions { display: flex; gap: 6px; flex-direction: column; align-items: flex-end; }
+    .status-btn {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-arrived { background: #d1fae5; color: #065f46; }
+    .btn-arrived:hover { background: #27ae60; color: white; }
+    .btn-noshow { background: #fee2e2; color: #991b1b; }
+    .btn-noshow:hover { background: #e74c3c; color: white; }
+    .btn-reschedule { background: #fef3c7; color: #92400e; }
+    .btn-reschedule:hover { background: #f39c12; color: white; }
+    .status-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tag-arrived { background: #d1fae5; color: #065f46; }
+    .tag-no-show { background: #fee2e2; color: #991b1b; }
+    .tag-rescheduled { background: #fef3c7; color: #92400e; }
+    .tag-pending { background: #e0e7ff; color: #3730a3; }
+    .tag-confirmed { background: #d1fae5; color: #065f46; }
+    .buildings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .building-card {
+      background: white;
+      border-radius: 10px;
+      padding: 12px 14px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      border-right: 3px solid #40916c;
+    }
+    .building-card .bname { font-size: 13px; font-weight: 600; color: #1b4332; }
+    .building-card .bact { font-size: 11px; color: #888; margin-top: 3px; }
+    .print-btn {
+      background: #1b4332;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .print-btn:hover { background: #2d6a4f; }
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-bar select, .filter-bar input {
+      padding: 8px 12px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      direction: rtl;
+    }
+    .filter-bar select:focus, .filter-bar input:focus {
+      outline: none;
+      border-color: #2d6a4f;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #888;
+      font-size: 14px;
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #d1fae5;
+      border-top-color: #2d6a4f;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1b4332;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .day-group { margin-bottom: 20px; }
+    .day-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: #2d6a4f;
+      padding: 6px 12px;
+      background: #d1fae5;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    @media print {
+      .header { background: #1b4332 !important; -webkit-print-color-adjust: exact; }
+      .appt-actions, .filter-bar, .print-btn { display: none !important; }
+      .appt-card { break-inside: avoid; }
+    }
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+      .appt-card { flex-direction: column; }
+      .appt-actions { flex-direction: row; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <div style="color:#2d6a4f;font-weight:600">טוען לוח זמנים...</div>
+</div>
+
+<div class="header">
+  <span class="header-icon">📋</span>
+  <div class="header-title">
+    <h1 id="profName">לוח זמנים</h1>
+    <p id="profType"></p>
+  </div>
+  <span class="header-badge" id="activityBadge">מינהלת</span>
+  <button class="print-btn" onclick="window.print()">🖨️ הדפס</button>
+</div>
+
+<div class="container">
+
+  <!-- Summary -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="num" id="sumTotal">—</div>
+      <div class="lbl">סה"כ פגישות</div>
+    </div>
+    <div class="summary-card" style="border-top-color:#27ae60">
+      <div class="num" style="color:#27ae60" id="sumArrived">—</div>
+      <div class="lbl">הגיעו</div>
+    </div>
+    <div class="summary-card" style="border-top-color:#e74c3c">
+      <div class="num" style="color:#e74c3c" id="sumNoShow">—</div>
+      <div class="lbl">לא הגיעו</div>
+    </div>
+  </div>
+
+  <!-- Buildings -->
+  <div class="section-title">🏢 הבניינים שלי <span class="count-badge" id="buildingCount">0</span></div>
+  <div class="buildings-grid" id="buildingsGrid"></div>
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <select id="filterStatus" onchange="renderAppointments()">
+      <option value="">כל הסטטוסים</option>
+      <option value="pending">ממתין</option>
+      <option value="confirmed">מאושר</option>
+      <option value="arrived">הגיע</option>
+      <option value="no-show">לא הגיע</option>
+      <option value="rescheduled">תואם מחדש</option>
+    </select>
+    <input type="text" id="filterSearch" placeholder="חיפוש שם / טלפון..." oninput="renderAppointments()" />
+    <select id="filterBuilding" onchange="renderAppointments()">
+      <option value="">כל הבניינים</option>
+    </select>
+  </div>
+
+  <!-- Appointments -->
+  <div class="section-title">📅 פגישות <span class="count-badge" id="apptCount">0</span></div>
+  <div id="appointmentsList"></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = '/api/activities';
+let token = null;
+let dashboardData = null;
+
+const TYPE_LABELS = {
+  appraiser: 'שמאי',
+  surveyor: 'מודד',
+  lawyer: 'עורך דין',
+  other: 'אחר'
+};
+
+const STATUS_LABELS = {
+  pending: 'ממתין',
+  confirmed: 'מאושר',
+  arrived: 'הגיע ✅',
+  'no-show': 'לא הגיע ❌',
+  rescheduled: 'תואם מחדש 🔄'
+};
+
+function getToken() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('token');
+}
+
+function showToast(msg, duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function formatDate(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  return d.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'numeric' });
+}
+
+function formatTime(dt) {
+  if (!dt) return '';
+  const d = new Date(dt);
+  return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+}
+
+function groupByDay(appointments) {
+  const groups = {};
+  appointments.forEach(a => {
+    const day = a.slot_datetime ? new Date(a.slot_datetime).toDateString() : 'ללא תאריך';
+    if (!groups[day]) groups[day] = [];
+    groups[day].push(a);
+  });
+  return groups;
+}
+
+function renderAppointments() {
+  if (!dashboardData) return;
+  const statusFilter = document.getElementById('filterStatus').value;
+  const searchFilter = document.getElementById('filterSearch').value.toLowerCase();
+  const buildingFilter = document.getElementById('filterBuilding').value;
+
+  let appts = dashboardData.appointments || [];
+
+  if (statusFilter) appts = appts.filter(a => a.status === statusFilter);
+  if (searchFilter) appts = appts.filter(a =>
+    (a.contact_name || '').toLowerCase().includes(searchFilter) ||
+    (a.contact_phone || '').includes(searchFilter)
+  );
+  if (buildingFilter) appts = appts.filter(a => a.building_id === buildingFilter);
+
+  document.getElementById('apptCount').textContent = appts.length;
+
+  const container = document.getElementById('appointmentsList');
+  if (!appts.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📭</div>אין פגישות להצגה</div>`;
+    return;
+  }
+
+  const groups = groupByDay(appts);
+  let html = '';
+  Object.entries(groups).forEach(([day, dayAppts]) => {
+    const dayLabel = day !== 'ללא תאריך'
+      ? new Date(day).toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })
+      : day;
+    html += `<div class="day-group"><div class="day-header">📅 ${dayLabel}</div>`;
+    dayAppts.forEach(a => {
+      const statusClass = a.status ? `status-${a.status}` : '';
+      const statusTag = a.status
+        ? `<span class="status-tag tag-${a.status}">${STATUS_LABELS[a.status] || a.status}</span>`
+        : '';
+      html += `
+        <div class="appt-card ${statusClass}" id="appt-${a.id}">
+          <div class="appt-time">
+            <div class="time">${formatTime(a.slot_datetime)}</div>
+            <div class="date">${formatDate(a.slot_datetime)}</div>
+          </div>
+          <div class="appt-info">
+            <div class="appt-name">${a.contact_name || '—'}</div>
+            <div class="appt-details">📱 ${a.contact_phone || '—'}${a.apartment_number ? ` | דירה ${a.apartment_number}` : ''}</div>
+            <div class="appt-building">🏢 ${a.building_id || '—'}</div>
+            ${a.notes ? `<div class="appt-details" style="margin-top:4px;color:#555">📝 ${a.notes}</div>` : ''}
+            ${statusTag}
+          </div>
+          <div class="appt-actions">
+            ${a.status !== 'arrived' ? `<button class="status-btn btn-arrived" onclick="updateStatus(${a.id}, 'arrived')">✅ הגיע</button>` : ''}
+            ${a.status !== 'no-show' ? `<button class="status-btn btn-noshow" onclick="updateStatus(${a.id}, 'no-show')">❌ לא הגיע</button>` : ''}
+            ${a.status !== 'rescheduled' ? `<button class="status-btn btn-reschedule" onclick="updateStatus(${a.id}, 'rescheduled')">🔄 תאם מחדש</button>` : ''}
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+async function updateStatus(apptId, status) {
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/${token}/appointment/${apptId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Update local data
+      const appt = dashboardData.appointments.find(a => a.id === apptId);
+      if (appt) appt.status = status;
+      renderAppointments();
+      showToast(`✅ סטטוס עודכן: ${STATUS_LABELS[status]}`);
+    } else {
+      showToast('❌ שגיאה בעדכון הסטטוס');
+    }
+  } catch (err) {
+    showToast('❌ שגיאת רשת');
+  }
+}
+
+async function loadDashboard() {
+  token = getToken();
+  if (!token) {
+    document.getElementById('loadingOverlay').innerHTML =
+      '<div style="text-align:center;color:#e74c3c;padding:40px"><div style="font-size:40px">🔒</div><br>קישור לא תקין</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/${token}`);
+    if (!res.ok) throw new Error('Dashboard not found');
+    dashboardData = await res.json();
+
+    const prof = dashboardData.professional;
+    document.getElementById('profName').textContent = prof.name;
+    document.getElementById('profType').textContent = TYPE_LABELS[prof.type] || prof.type;
+    document.title = `לוח זמנים — ${prof.name} | מינהלת`;
+
+    // Summary
+    const appts = dashboardData.appointments || [];
+    document.getElementById('sumTotal').textContent = appts.length;
+    document.getElementById('sumArrived').textContent = appts.filter(a => a.status === 'arrived').length;
+    document.getElementById('sumNoShow').textContent = appts.filter(a => a.status === 'no-show').length;
+
+    // Buildings
+    const assignments = dashboardData.assignments || [];
+    document.getElementById('buildingCount').textContent = assignments.length;
+    const buildingSelect = document.getElementById('filterBuilding');
+    const buildingsGrid = document.getElementById('buildingsGrid');
+    let buildingsHtml = '';
+    assignments.forEach(a => {
+      buildingsHtml += `
+        <div class="building-card">
+          <div class="bname">🏢 ${a.building_id}</div>
+          <div class="bact">${a.activity_name}</div>
+        </div>`;
+      const opt = document.createElement('option');
+      opt.value = a.building_id;
+      opt.textContent = a.building_id;
+      buildingSelect.appendChild(opt);
+    });
+    buildingsGrid.innerHTML = buildingsHtml || '<div class="empty-state"><div class="icon">🏢</div>אין בניינים משויכים</div>';
+
+    // Activity badge
+    if (assignments.length) {
+      document.getElementById('activityBadge').textContent = assignments[0].activity_name;
+    }
+
+    renderAppointments();
+  } catch (err) {
+    document.getElementById('loadingOverlay').innerHTML =
+      `<div style="text-align:center;color:#e74c3c;padding:40px"><div style="font-size:40px">⚠️</div><br>${err.message}</div>`;
+    return;
+  }
+
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
