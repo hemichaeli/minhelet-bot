@@ -54,24 +54,6 @@ app.use('/api/calendar',    require('./routes/calendarRoutes'));
 app.use('/api/events',      require('./routes/eventSchedulerRoutes'));
 app.use('/api/activities',  require('./routes/activitiesRoutes'));
 
-// ── Temp Admin Migration Endpoint (remove after use) ────────────────────────
-app.post('/admin/run-migration-004', async (req, res) => {
-  const { Pool } = require('pg');
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : false
-  });
-  try {
-    await pool.query('ALTER TABLE activities ADD COLUMN IF NOT EXISTS campaign_id TEXT');
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_activities_campaign_id ON activities(campaign_id)');
-    res.json({ success: true, message: 'campaign_id column added' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  } finally {
-    await pool.end();
-  }
-});
-
 // ── Scheduled Jobs ────────────────────────────────────────────────────────────
 
 // Appointment reminders: every hour

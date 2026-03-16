@@ -4,7 +4,7 @@
   "description": "Minhelet Scheduling Bot — WhatsApp appointment coordination for Pinuy-Binuy residents (appraiser / surveyor / signing ceremony)",
   "main": "src/index.js",
   "scripts": {
-    "start": "node -e \"require('./src/db/migrate').runMigrations().then(()=>{require('child_process').spawn('node',['src/index.js'],{stdio:'inherit'})})\"",
+    "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "migrate": "node-pg-migrate -m migrations --no-check-order"
   },
