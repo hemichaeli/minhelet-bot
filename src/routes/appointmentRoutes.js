@@ -175,7 +175,7 @@ router.get('/', async (req, res) => {
 // POST /api/appointments/send-slots — send available slots via WhatsApp to a lead
 router.post('/send-slots', async (req, res) => {
   try {
-    const { phone, leadName, leadId, activityId, buildingId, buildingName } = req.body;
+    const { phone, leadName, leadId, activityId, buildingId, buildingName, developerName, messageTemplate } = req.body;
     if (!phone) return res.status(400).json({ success: false, error: 'phone required' });
 
     // Generate unique token for this appointment
@@ -184,21 +184,73 @@ router.post('/send-slots', async (req, res) => {
     const BASE_URL = process.env.BASE_URL || 'https://minhelet-bot-production.up.railway.app';
     const rescheduleLink = `${BASE_URL}/reschedule.html?token=${appointmentToken}`;
 
-    // Get available slots
-    const { rows: slots } = await pool.query(`
-      SELECT * FROM appointment_slots 
+    // Get smart-clustered available slots (same algorithm as /slots/available)
+    const { rows: allSlots } = await pool.query(`
+      SELECT * FROM appointment_slots
       WHERE is_available = true AND slot_date >= CURRENT_DATE
       ORDER BY slot_date ASC, slot_time ASC
-      LIMIT 5
     `);
 
-    if (slots.length === 0) {
+    if (allSlots.length === 0) {
       return res.status(400).json({ success: false, error: 'No available slots. Add slots first.' });
     }
 
-    // Build WhatsApp message with reschedule link
+    // Cluster: find booked slots for this activity to score proximity
+    let bookedSlots = [];
+    if (activityId) {
+      const { rows } = await pool.query(
+        `SELECT s.slot_date, s.slot_time FROM appointment_slots s
+         JOIN appointments a ON a.slot_id = s.id
+         WHERE s.is_available = false AND a.activity_id = $1 AND s.slot_date >= CURRENT_DATE`,
+        [activityId]
+      );
+      bookedSlots = rows;
+    }
+    const busyMap = {};
+    for (const b of bookedSlots) {
+      const dk = String(b.slot_date).split('T')[0];
+      const hr = parseInt(String(b.slot_time).split(':')[0]);
+      if (!busyMap[dk]) busyMap[dk] = [];
+      busyMap[dk].push(hr);
+    }
+    const scored = allSlots.map(s => {
+      const dk = String(s.slot_date).split('T')[0];
+      const hr = parseInt(String(s.slot_time).split(':')[0]);
+      let score = 0;
+      for (const bh of (busyMap[dk] || [])) {
+        const d = Math.abs(hr - bh);
+        if (d === 0) score += 10; else if (d <= 1) score += 8; else if (d <= 2) score += 5;
+      }
+      const days = Math.floor((new Date(dk) - new Date()) / 86400000);
+      score += Math.max(0, 14 - days) * 0.1;
+      return { ...s, _score: score };
+    });
+    scored.sort((a, b) => b._score !== a._score ? b._score - a._score :
+      String(a.slot_date).localeCompare(String(b.slot_date)) ||
+      String(a.slot_time).localeCompare(String(b.slot_time)));
+    const slots = scored.slice(0, 5);
+
+    // Build WhatsApp message — support custom template or default
+    const senderName = developerName || process.env.DEVELOPER_NAME || 'מינהלת';
     const slotsText = slots.map((s, i) => `${i + 1}. ${formatSlotForWhatsApp(s)}`).join('\n');
-    const message = `שלום${leadName ? ' ' + leadName : ''},\nמינהלת כאן. אנחנו מכינים לתאם איתך פגישה${buildingName ? ' בנוגע ל' + buildingName : ''}.\n\nהזמנים הפנויים:\n${slotsText}\n\nלאישור, ביטול או תיאום מחדש — לחץ כאן:\n${rescheduleLink}`;
+
+    let message;
+    if (messageTemplate) {
+      // Replace placeholders in custom template
+      message = messageTemplate
+        .replace(/\{\{שם_הדייר\}\}/g, leadName || '')
+        .replace(/\{\{שם_הדייר\}}/g, leadName || '')
+        .replace(/\{\{שם_היזם\}\}/g, senderName)
+        .replace(/\{\{שם_היזם\}}/g, senderName)
+        .replace(/\{\{שם_הבניין\}\}/g, buildingName || '')
+        .replace(/\{\{שם_הבניין\}}/g, buildingName || '')
+        .replace(/\{\{זמנים_פנויים\}\}/g, slotsText)
+        .replace(/\{\{זמנים_פנויים\}}/g, slotsText)
+        .replace(/\{\{קישור_ניהול\}\}/g, rescheduleLink)
+        .replace(/\{\{קישור_ניהול\}}/g, rescheduleLink);
+    } else {
+      message = `שלום${leadName ? ' ' + leadName : ''},\n${senderName} כאן. אנחנו מעוניינים לתאם איתך פגישה${buildingName ? ' בנוגע ל' + buildingName : ''}.\n\nהזמנים הפנויים:\n${slotsText}\n\n👇 לאישור ✅ | ביטול ❌ | תיאום מחדש 🔄 — לחץ כאן:\n${rescheduleLink}`;
+    }
 
     // Send WhatsApp
     const waResult = await sendWhatsApp(phone, message);
@@ -364,17 +416,86 @@ async function ensureTokenColumn() {
 }
 ensureTokenColumn().catch(e => console.warn('[Appointments] token column:', e.message));
 
-// GET /api/appointments/slots/available — available slots for tenant reschedule page
+// GET /api/appointments/slots/available — smart clustered slots for tenant reschedule page
+// Algorithm: prioritize slots that are adjacent (within 2 hours) to already-booked slots on the same day.
+// This clusters appointments geographically/temporally to minimize travel time for professionals.
 router.get('/slots/available', async (req, res) => {
   try {
-    const { rows } = await pool.query(`
+    const { activityId } = req.query;
+
+    // 1. Get all available slots
+    const { rows: allSlots } = await pool.query(`
       SELECT id, slot_date, slot_time, label
       FROM appointment_slots
       WHERE is_available = true AND slot_date >= CURRENT_DATE
       ORDER BY slot_date ASC, slot_time ASC
-      LIMIT 12
     `);
-    res.json({ success: true, slots: rows });
+
+    if (allSlots.length === 0) return res.json({ success: true, slots: [] });
+
+    // 2. Get already-booked slots (to find busy times for clustering)
+    const bookedQuery = activityId
+      ? `SELECT s.slot_date, s.slot_time FROM appointment_slots s
+         JOIN appointments a ON a.slot_id = s.id
+         WHERE s.is_available = false AND a.activity_id = $1 AND s.slot_date >= CURRENT_DATE`
+      : `SELECT slot_date, slot_time FROM appointment_slots
+         WHERE is_available = false AND slot_date >= CURRENT_DATE`;
+    const bookedParams = activityId ? [activityId] : [];
+    const { rows: bookedSlots } = await pool.query(bookedQuery, bookedParams);
+
+    // 3. Build a set of busy (date, hour) pairs
+    const busyMap = {}; // key: 'YYYY-MM-DD' => [hour, hour, ...]
+    for (const b of bookedSlots) {
+      const dateKey = b.slot_date instanceof Date
+        ? b.slot_date.toISOString().split('T')[0]
+        : String(b.slot_date).split('T')[0];
+      const hour = parseInt(String(b.slot_time).split(':')[0]);
+      if (!busyMap[dateKey]) busyMap[dateKey] = [];
+      busyMap[dateKey].push(hour);
+    }
+
+    // 4. Score each available slot: higher score = closer to existing bookings
+    const CLUSTER_WINDOW_HOURS = 2;
+    const scored = allSlots.map(slot => {
+      const dateKey = slot.slot_date instanceof Date
+        ? slot.slot_date.toISOString().split('T')[0]
+        : String(slot.slot_date).split('T')[0];
+      const slotHour = parseInt(String(slot.slot_time).split(':')[0]);
+      const busyHours = busyMap[dateKey] || [];
+      let score = 0;
+      for (const bh of busyHours) {
+        const diff = Math.abs(slotHour - bh);
+        if (diff === 0) score += 10;        // same hour (back-to-back)
+        else if (diff <= 1) score += 8;    // 1 hour apart
+        else if (diff <= CLUSTER_WINDOW_HOURS) score += 5; // within window
+      }
+      // Prefer earlier dates (freshness bonus: subtract days from today)
+      const today = new Date();
+      const slotDate = new Date(dateKey);
+      const daysDiff = Math.floor((slotDate - today) / (1000 * 60 * 60 * 24));
+      score += Math.max(0, 14 - daysDiff) * 0.1; // slight preference for sooner dates
+      return { ...slot, _score: score };
+    });
+
+    // 5. Sort: clustered slots first (score desc), then by date/time
+    scored.sort((a, b) => {
+      if (b._score !== a._score) return b._score - a._score;
+      const dateA = String(a.slot_date).split('T')[0];
+      const dateB = String(b.slot_date).split('T')[0];
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return String(a.slot_time).localeCompare(String(b.slot_time));
+    });
+
+    // 6. Return top 12, with a flag indicating if they are clustered
+    const result = scored.slice(0, 12).map(s => ({
+      id: s.id,
+      slot_date: s.slot_date,
+      slot_time: s.slot_time,
+      label: s.label,
+      clustered: s._score > 0  // true = adjacent to existing booking
+    }));
+
+    res.json({ success: true, slots: result, has_bookings: bookedSlots.length > 0 });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }

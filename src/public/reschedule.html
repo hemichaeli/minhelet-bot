@@ -6,182 +6,293 @@
   <title>ניהול פגישה — מינהלת</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f0f4f8;
+      background: linear-gradient(135deg, #f0f4f0 0%, #e8f5e9 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: 20px 16px 40px;
       color: #1a1a1a;
     }
-    .logo {
-      margin-bottom: 24px;
+
+    /* ── Header ── */
+    .header {
       text-align: center;
+      margin-bottom: 20px;
     }
-    .logo h1 {
-      font-size: 1.6rem;
-      color: #1b4332;
-      font-weight: 700;
-    }
-    .logo p {
-      color: #555;
-      font-size: 0.9rem;
-      margin-top: 4px;
-    }
+    .header .logo-icon { font-size: 2.4rem; }
+    .header h1 { font-size: 1.5rem; color: #1b4332; font-weight: 700; margin-top: 4px; }
+    .header p { color: #555; font-size: 0.9rem; margin-top: 2px; }
+
+    /* ── Cards ── */
     .card {
       background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      padding: 28px 24px;
+      border-radius: 18px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      padding: 22px 20px;
       width: 100%;
-      max-width: 480px;
-      margin-bottom: 16px;
+      max-width: 460px;
+      margin-bottom: 14px;
     }
-    .card h2 {
-      font-size: 1.1rem;
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
       color: #1b4332;
-      margin-bottom: 16px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e8f5e9;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+
+    /* ── Appointment info ── */
     .info-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid #f5f5f5;
-      font-size: 0.95rem;
+      padding: 9px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.93rem;
     }
     .info-row:last-child { border-bottom: none; }
-    .info-label { color: #666; }
-    .info-value { font-weight: 600; color: #1a1a1a; }
+    .info-label { color: #777; }
+    .info-value { font-weight: 600; color: #1a1a1a; text-align: left; max-width: 60%; }
+
+    /* ── Status badge ── */
     .status-badge {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       padding: 4px 12px;
       border-radius: 20px;
       font-size: 0.85rem;
       font-weight: 600;
     }
-    .status-confirmed { background: #e8f5e9; color: #2e7d32; }
-    .status-pending { background: #fff3e0; color: #e65100; }
-    .status-cancelled { background: #fce4ec; color: #c62828; }
-    .status-rescheduled { background: #e3f2fd; color: #1565c0; }
-    .btn {
-      display: block;
+    .status-pending    { background: #fff8e1; color: #f57f17; }
+    .status-confirmed  { background: #e8f5e9; color: #2e7d32; }
+    .status-arrived    { background: #e8f5e9; color: #2e7d32; }
+    .status-rescheduled{ background: #e3f2fd; color: #1565c0; }
+    .status-cancelled  { background: #fce4ec; color: #c62828; }
+    .status-no-show    { background: #fce4ec; color: #c62828; }
+
+    /* ── 3 Action buttons ── */
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
       width: 100%;
-      padding: 14px;
+      padding: 16px 20px;
       border: none;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 600;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 700;
       cursor: pointer;
-      margin-bottom: 10px;
-      transition: opacity 0.2s, transform 0.1s;
+      transition: transform 0.12s, box-shadow 0.12s;
+      letter-spacing: 0.01em;
+    }
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-confirm {
+      background: linear-gradient(135deg, #2d6a4f, #40916c);
+      color: white;
+      box-shadow: 0 4px 14px rgba(45,106,79,0.3);
+    }
+    .btn-confirm:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(45,106,79,0.4); }
+
+    .btn-reschedule {
+      background: linear-gradient(135deg, #e65100, #f57c00);
+      color: white;
+      box-shadow: 0 4px 14px rgba(230,81,0,0.25);
+    }
+    .btn-reschedule:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(230,81,0,0.35); }
+
+    .btn-cancel {
+      background: white;
+      color: #c62828;
+      border: 2px solid #ef9a9a;
+      box-shadow: 0 2px 8px rgba(198,40,40,0.08);
+    }
+    .btn-cancel:hover:not(:disabled) { background: #fff5f5; }
+
+    .btn-icon { font-size: 1.3rem; }
+
+    /* ── Slot picker ── */
+    .slots-section { margin-top: 4px; }
+    .slots-hint {
+      font-size: 0.82rem;
+      color: #888;
+      margin-bottom: 12px;
       text-align: center;
     }
-    .btn:active { transform: scale(0.98); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-confirm { background: #2d6a4f; color: white; }
-    .btn-reschedule { background: #1565c0; color: white; }
-    .btn-cancel { background: #f5f5f5; color: #c62828; border: 1px solid #ffcdd2; }
-    .btn-confirm:hover:not(:disabled) { background: #1b4332; }
-    .btn-reschedule:hover:not(:disabled) { background: #0d47a1; }
-    .btn-cancel:hover:not(:disabled) { background: #ffebee; }
-    .slots-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 12px;
+    .slots-hint .cluster-note {
+      display: inline-block;
+      background: #fff3e0;
+      color: #e65100;
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-size: 0.78rem;
+      margin-top: 4px;
     }
-    .slot-btn {
-      padding: 12px 8px;
+
+    .slots-by-date { margin-bottom: 16px; }
+    .date-header {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .slots-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .slot-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 14px;
       border: 2px solid #e0e0e0;
-      border-radius: 10px;
+      border-radius: 12px;
       background: white;
       cursor: pointer;
+      transition: all 0.15s;
+      min-width: 72px;
+      position: relative;
+    }
+    .slot-chip:hover { border-color: #f57c00; background: #fff8f0; }
+    .slot-chip.selected {
+      border-color: #e65100;
+      background: linear-gradient(135deg, #e65100, #f57c00);
+      color: white;
+    }
+    .slot-chip.clustered::after {
+      content: '⚡';
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      font-size: 0.7rem;
+      background: #fff3e0;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #ffcc80;
+    }
+    .slot-time-text { font-size: 1rem; font-weight: 700; }
+    .slot-label-text { font-size: 0.72rem; color: #aaa; margin-top: 1px; }
+    .slot-chip.selected .slot-label-text { color: rgba(255,255,255,0.8); }
+
+    .confirm-slot-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #e65100, #f57c00);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 14px;
+      transition: opacity 0.2s;
+    }
+    .confirm-slot-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .back-link {
       text-align: center;
-      font-size: 0.9rem;
-      transition: all 0.2s;
-      color: #1a1a1a;
+      margin-top: 10px;
+      font-size: 0.88rem;
+      color: #888;
+      cursor: pointer;
+      text-decoration: underline;
     }
-    .slot-btn:hover { border-color: #2d6a4f; background: #e8f5e9; }
-    .slot-btn.selected { border-color: #2d6a4f; background: #2d6a4f; color: white; }
-    .slot-date { font-weight: 700; font-size: 0.85rem; }
-    .slot-time { font-size: 1rem; font-weight: 600; margin-top: 2px; }
-    .section-title {
-      font-size: 0.95rem;
-      color: #555;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
+
+    /* ── Alerts ── */
     .alert {
-      padding: 14px 16px;
-      border-radius: 10px;
+      padding: 13px 16px;
+      border-radius: 12px;
       margin-bottom: 12px;
-      font-size: 0.95rem;
+      font-size: 0.93rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-    .alert-error { background: #fce4ec; color: #c62828; border: 1px solid #ef9a9a; }
-    .alert-info { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: #666;
-    }
+    .alert-error   { background: #fce4ec; color: #c62828; border: 1px solid #ef9a9a; }
+    .alert-info    { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+
+    /* ── Loading ── */
+    .loading { text-align: center; padding: 40px 20px; color: #888; }
     .spinner {
-      width: 36px; height: 36px;
+      width: 38px; height: 38px;
       border: 3px solid #e0e0e0;
       border-top-color: #2d6a4f;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
-      margin: 0 auto 12px;
+      margin: 0 auto 14px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none; }
-    .confirm-btn-row { margin-top: 16px; }
-    .no-slots { text-align: center; color: #888; padding: 20px; font-size: 0.9rem; }
-    footer {
-      margin-top: 24px;
+
+    .hidden { display: none !important; }
+
+    /* ── Final state ── */
+    .final-state {
       text-align: center;
-      color: #aaa;
-      font-size: 0.8rem;
+      padding: 10px 0;
+    }
+    .final-icon { font-size: 3rem; margin-bottom: 12px; }
+    .final-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+    .final-sub { color: #666; font-size: 0.9rem; line-height: 1.5; }
+
+    footer {
+      margin-top: 28px;
+      text-align: center;
+      color: #bbb;
+      font-size: 0.78rem;
     }
   </style>
 </head>
 <body>
 
-<div class="logo">
-  <h1>🏢 מינהלת</h1>
+<div class="header">
+  <div class="logo-icon">🏢</div>
+  <h1>מינהלת</h1>
   <p>ניהול פגישה</p>
 </div>
 
-<!-- Loading state -->
+<!-- Loading -->
 <div id="loading" class="card loading">
   <div class="spinner"></div>
   <p>טוען פרטי פגישה...</p>
 </div>
 
-<!-- Error state -->
-<div id="error-state" class="card hidden">
+<!-- Error -->
+<div id="error-card" class="card hidden">
   <div class="alert alert-error" id="error-msg">שגיאה בטעינת הפגישה.</div>
 </div>
 
-<!-- Success state (after action) -->
-<div id="success-state" class="card hidden">
-  <div class="alert alert-success" id="success-msg">הפעולה בוצעה בהצלחה!</div>
-</div>
-
-<!-- Main appointment card -->
-<div id="main-card" class="card hidden">
-  <h2>📅 פרטי הפגישה שלך</h2>
+<!-- Appointment info card -->
+<div id="info-card" class="card hidden">
+  <div class="card-title">📅 הפגישה שלך</div>
   <div class="info-row">
     <span class="info-label">שם</span>
     <span class="info-value" id="appt-name">—</span>
   </div>
   <div class="info-row">
-    <span class="info-label">בניין</span>
+    <span class="info-label">בניין / פרויקט</span>
     <span class="info-value" id="appt-building">—</span>
   </div>
   <div class="info-row">
@@ -198,25 +309,50 @@
   </div>
 </div>
 
-<!-- Actions card -->
+<!-- Alert area (above action buttons) -->
+<div id="alert-area" style="width:100%;max-width:460px;"></div>
+
+<!-- Action buttons card -->
 <div id="actions-card" class="card hidden">
-  <h2>⚡ פעולות</h2>
-  <div id="alert-area"></div>
-  <button class="btn btn-confirm" id="btn-confirm" onclick="confirmAppointment()">✅ אשר הגעה לפגישה</button>
-  <button class="btn btn-reschedule" id="btn-reschedule" onclick="showReschedule()">🔄 בקש לתאם מחדש</button>
-  <button class="btn btn-cancel" id="btn-cancel" onclick="cancelAppointment()">❌ ביטול פגישה</button>
+  <div class="card-title">⚡ מה תרצה לעשות?</div>
+  <div class="action-buttons">
+    <button class="action-btn btn-confirm" id="btn-confirm" onclick="confirmAppointment()">
+      <span class="btn-icon">✅</span>
+      <span>אני מגיע/ה לפגישה</span>
+    </button>
+    <button class="action-btn btn-reschedule" id="btn-reschedule" onclick="showReschedule()">
+      <span class="btn-icon">🔄</span>
+      <span>תאם מחדש — בחר מועד אחר</span>
+    </button>
+    <button class="action-btn btn-cancel" id="btn-cancel" onclick="cancelAppointment()">
+      <span class="btn-icon">❌</span>
+      <span>ביטול הפגישה</span>
+    </button>
+  </div>
 </div>
 
-<!-- Reschedule card -->
+<!-- Reschedule picker card -->
 <div id="reschedule-card" class="card hidden">
-  <h2>🗓️ בחר מועד חדש</h2>
-  <p class="section-title">המועדים הפנויים הקרובים:</p>
-  <div id="slots-grid" class="slots-grid">
-    <div class="no-slots">טוען מועדים...</div>
+  <div class="card-title">🗓️ בחר מועד חדש</div>
+  <div class="slots-hint">
+    <div>בחר מועד פנוי מהרשימה הבאה</div>
+    <div id="cluster-note" class="cluster-note hidden">⚡ מועדים מסומנים צמודים לפגישות אחרות — מועדפים לייעול</div>
   </div>
-  <div class="confirm-btn-row">
-    <button class="btn btn-confirm" id="btn-confirm-reschedule" onclick="confirmReschedule()" disabled>אשר מועד חדש</button>
-    <button class="btn btn-cancel" onclick="hideReschedule()">חזור</button>
+  <div id="slots-container" class="slots-section">
+    <div class="loading"><div class="spinner"></div><p>טוען מועדים...</p></div>
+  </div>
+  <button class="confirm-slot-btn" id="btn-confirm-slot" onclick="confirmReschedule()" disabled>
+    ✅ אשר מועד חדש
+  </button>
+  <div class="back-link" onclick="hideReschedule()">← חזור</div>
+</div>
+
+<!-- Final state (after action) -->
+<div id="final-card" class="card hidden">
+  <div class="final-state">
+    <div class="final-icon" id="final-icon">✅</div>
+    <div class="final-title" id="final-title">הפעולה בוצעה</div>
+    <div class="final-sub" id="final-sub"></div>
   </div>
 </div>
 
@@ -224,33 +360,27 @@
 
 <script>
 const API_BASE = 'https://minhelet-bot-production.up.railway.app';
-let appointmentToken = null;
-let appointmentData = null;
+let token = null;
+let apptData = null;
 let selectedSlotId = null;
 
-// ── Init ─────────────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  const params = new URLSearchParams(window.location.search);
-  appointmentToken = params.get('token');
-
-  if (!appointmentToken) {
-    showError('קישור לא תקין — חסר מזהה פגישה.');
-    return;
-  }
-
+  token = new URLSearchParams(window.location.search).get('token');
+  if (!token) { showError('קישור לא תקין — חסר מזהה פגישה.'); return; }
   await loadAppointment();
 });
 
-// ── Load appointment ──────────────────────────────────────────────────────────
+// ── Load ──────────────────────────────────────────────────────────────────────
 async function loadAppointment() {
   try {
-    const res = await fetch(`${API_BASE}/api/appointments/by-token/${appointmentToken}`);
+    const res = await fetch(`${API_BASE}/api/appointments/by-token/${token}`);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       showError(err.error || 'לא נמצאה פגישה עם הקישור הזה.');
       return;
     }
-    appointmentData = await res.json();
+    apptData = await res.json();
     renderAppointment();
   } catch (e) {
     showError('שגיאה בחיבור לשרת. נסה שוב מאוחר יותר.');
@@ -259,180 +389,210 @@ async function loadAppointment() {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderAppointment() {
-  const a = appointmentData;
+  const a = apptData;
   document.getElementById('appt-name').textContent = a.lead_name || '—';
   document.getElementById('appt-building').textContent = a.building_name || a.building_id || '—';
   document.getElementById('appt-datetime').textContent = a.slot_datetime
-    ? formatDatetime(a.slot_datetime)
-    : 'טרם נקבע';
+    ? formatDatetime(a.slot_datetime) : 'טרם נקבע';
 
   const typeMap = { signing: 'כנס חתימות', appraisal: 'שמאות', measurement: 'מדידה', other: 'אחר' };
-  document.getElementById('appt-type').textContent = typeMap[a.activity_type] || a.activity_type || '—';
+  document.getElementById('appt-type').textContent = typeMap[a.activity_type] || a.activity_type || 'פגישה';
 
-  const statusBadge = document.getElementById('appt-status-badge');
   const statusMap = {
     pending:     { label: 'ממתין לאישור', cls: 'status-pending' },
-    confirmed:   { label: 'מאושר ✅',     cls: 'status-confirmed' },
-    arrived:     { label: 'הגיע ✅',       cls: 'status-confirmed' },
-    'no-show':   { label: 'לא הגיע ❌',   cls: 'status-cancelled' },
-    rescheduled: { label: 'תואם מחדש 🔄', cls: 'status-rescheduled' },
-    cancelled:   { label: 'בוטל ❌',      cls: 'status-cancelled' },
+    confirmed:   { label: '✅ מאושר',     cls: 'status-confirmed' },
+    arrived:     { label: '✅ הגיע',       cls: 'status-arrived' },
+    'no-show':   { label: '❌ לא הגיע',   cls: 'status-no-show' },
+    rescheduled: { label: '🔄 תואם מחדש', cls: 'status-rescheduled' },
+    cancelled:   { label: '❌ בוטל',      cls: 'status-cancelled' },
   };
   const s = statusMap[a.status] || { label: a.status, cls: 'status-pending' };
-  statusBadge.textContent = s.label;
-  statusBadge.className = `status-badge ${s.cls}`;
+  const badge = document.getElementById('appt-status-badge');
+  badge.textContent = s.label;
+  badge.className = `status-badge ${s.cls}`;
 
-  // Disable actions if already cancelled/arrived
-  if (a.status === 'cancelled' || a.status === 'arrived' || a.status === 'no-show') {
+  hide('loading');
+  show('info-card');
+
+  // Disable actions if terminal status
+  const terminal = ['cancelled', 'arrived', 'no-show'];
+  if (terminal.includes(a.status)) {
     document.getElementById('btn-confirm').disabled = true;
     document.getElementById('btn-reschedule').disabled = true;
     document.getElementById('btn-cancel').disabled = true;
   }
-
-  hide('loading');
-  show('main-card');
   show('actions-card');
 }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
+// ── Confirm ───────────────────────────────────────────────────────────────────
 async function confirmAppointment() {
   if (!confirm('לאשר הגעה לפגישה?')) return;
-  setLoading(true);
+  setBusy(true);
   try {
-    const res = await fetch(`${API_BASE}/api/appointments/by-token/${appointmentToken}/confirm`, {
+    const res = await fetch(`${API_BASE}/api/appointments/by-token/${token}/confirm`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }
     });
     const data = await res.json();
     if (res.ok) {
-      showAlert('success', '✅ הפגישה אושרה! נשמח לראותך.');
-      appointmentData.status = 'confirmed';
-      renderAppointment();
+      showFinal('✅', 'אישרת את הגעתך!', `נשמח לראותך בפגישה ב${formatDatetime(apptData.slot_datetime)}.\nנשלח לך תזכורת לפני הפגישה.`);
     } else {
       showAlert('error', data.error || 'שגיאה באישור הפגישה.');
     }
-  } catch (e) {
-    showAlert('error', 'שגיאה בחיבור לשרת.');
-  }
-  setLoading(false);
+  } catch (e) { showAlert('error', 'שגיאה בחיבור לשרת.'); }
+  setBusy(false);
 }
 
+// ── Cancel ────────────────────────────────────────────────────────────────────
 async function cancelAppointment() {
   if (!confirm('האם אתה בטוח שברצונך לבטל את הפגישה?')) return;
-  setLoading(true);
+  setBusy(true);
   try {
-    const res = await fetch(`${API_BASE}/api/appointments/by-token/${appointmentToken}/cancel`, {
+    const res = await fetch(`${API_BASE}/api/appointments/by-token/${token}/cancel`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }
     });
     const data = await res.json();
     if (res.ok) {
-      showAlert('success', '❌ הפגישה בוטלה. ניצור איתך קשר לתיאום מחדש אם יהיה צורך.');
-      appointmentData.status = 'cancelled';
-      renderAppointment();
+      showFinal('❌', 'הפגישה בוטלה', 'אם תרצה לתאם מחדש בעתיד, פנה אלינו ישירות.\nצוות מינהלת.');
     } else {
       showAlert('error', data.error || 'שגיאה בביטול הפגישה.');
     }
-  } catch (e) {
-    showAlert('error', 'שגיאה בחיבור לשרת.');
-  }
-  setLoading(false);
+  } catch (e) { showAlert('error', 'שגיאה בחיבור לשרת.'); }
+  setBusy(false);
 }
 
+// ── Reschedule ────────────────────────────────────────────────────────────────
 async function showReschedule() {
+  hide('actions-card');
   show('reschedule-card');
-  document.getElementById('slots-grid').innerHTML = '<div class="no-slots">טוען מועדים פנויים...</div>';
   selectedSlotId = null;
-  document.getElementById('btn-confirm-reschedule').disabled = true;
+  document.getElementById('btn-confirm-slot').disabled = true;
+  document.getElementById('slots-container').innerHTML =
+    '<div class="loading"><div class="spinner"></div><p>טוען מועדים פנויים...</p></div>';
 
   try {
-    const res = await fetch(`${API_BASE}/api/appointments/slots/available?activityId=${appointmentData.activity_id || ''}`);
+    const actId = apptData?.activity_id || '';
+    const res = await fetch(`${API_BASE}/api/appointments/slots/available?activityId=${actId}`);
     const data = await res.json();
     const slots = data.slots || [];
+    const hasCluster = slots.some(s => s.clustered);
+
+    if (hasCluster) {
+      document.getElementById('cluster-note').classList.remove('hidden');
+    }
 
     if (slots.length === 0) {
-      document.getElementById('slots-grid').innerHTML = '<div class="no-slots">אין מועדים פנויים כרגע. אנא פנה אלינו ישירות.</div>';
+      document.getElementById('slots-container').innerHTML =
+        '<p style="text-align:center;color:#888;padding:20px">אין מועדים פנויים כרגע.<br>אנא פנה אלינו ישירות.</p>';
       return;
     }
 
-    document.getElementById('slots-grid').innerHTML = slots.slice(0, 8).map(s => `
-      <div class="slot-btn" onclick="selectSlot(this, ${s.id})" data-slot-id="${s.id}">
-        <div class="slot-date">${formatDate(s.slot_date)}</div>
-        <div class="slot-time">${s.slot_time ? s.slot_time.substring(0,5) : ''}</div>
-        ${s.label ? `<div style="font-size:0.75rem;color:#888;margin-top:2px">${s.label}</div>` : ''}
-      </div>
-    `).join('');
+    // Group by date
+    const byDate = {};
+    for (const s of slots) {
+      const dateKey = String(s.slot_date).split('T')[0];
+      if (!byDate[dateKey]) byDate[dateKey] = [];
+      byDate[dateKey].push(s);
+    }
+
+    let html = '';
+    for (const [dateKey, daySlots] of Object.entries(byDate)) {
+      html += `<div class="slots-by-date">
+        <div class="date-header">${formatDateHeader(dateKey)}</div>
+        <div class="slots-row">`;
+      for (const s of daySlots) {
+        const time = String(s.slot_time).substring(0, 5);
+        const clusterClass = s.clustered ? ' clustered' : '';
+        html += `<div class="slot-chip${clusterClass}" onclick="selectSlot(this, ${s.id})" data-id="${s.id}">
+          <span class="slot-time-text">${time}</span>
+          ${s.label ? `<span class="slot-label-text">${s.label}</span>` : ''}
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+    document.getElementById('slots-container').innerHTML = html;
   } catch (e) {
-    document.getElementById('slots-grid').innerHTML = '<div class="no-slots">שגיאה בטעינת המועדים.</div>';
+    document.getElementById('slots-container').innerHTML =
+      '<p style="text-align:center;color:#c62828;padding:20px">שגיאה בטעינת המועדים.</p>';
   }
 }
 
 function selectSlot(el, slotId) {
-  document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.slot-chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   selectedSlotId = slotId;
-  document.getElementById('btn-confirm-reschedule').disabled = false;
+  document.getElementById('btn-confirm-slot').disabled = false;
 }
 
 async function confirmReschedule() {
   if (!selectedSlotId) return;
   if (!confirm('לאשר את המועד החדש שבחרת?')) return;
-  setLoading(true);
+  setBusy(true);
   try {
-    const res = await fetch(`${API_BASE}/api/appointments/by-token/${appointmentToken}/reschedule`, {
+    const res = await fetch(`${API_BASE}/api/appointments/by-token/${token}/reschedule`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slot_id: selectedSlotId })
     });
     const data = await res.json();
     if (res.ok) {
-      showAlert('success', '🔄 הפגישה תואמה מחדש! נשלח לך אישור בקרוב.');
-      appointmentData.status = 'rescheduled';
-      appointmentData.slot_datetime = data.slot_datetime;
-      hide('reschedule-card');
-      renderAppointment();
+      showFinal('🔄', 'הפגישה תואמה מחדש!', `המועד החדש אושר.\nנשלח לך אישור בהודעת WhatsApp.\nנשמח לראותך! צוות מינהלת.`);
     } else {
       showAlert('error', data.error || 'שגיאה בתיאום מחדש.');
+      show('actions-card');
+      hide('reschedule-card');
     }
-  } catch (e) {
-    showAlert('error', 'שגיאה בחיבור לשרת.');
-  }
-  setLoading(false);
+  } catch (e) { showAlert('error', 'שגיאה בחיבור לשרת.'); }
+  setBusy(false);
 }
 
 function hideReschedule() {
   hide('reschedule-card');
+  show('actions-card');
+}
+
+// ── Final state ───────────────────────────────────────────────────────────────
+function showFinal(icon, title, sub) {
+  hide('actions-card');
+  hide('reschedule-card');
+  document.getElementById('final-icon').textContent = icon;
+  document.getElementById('final-title').textContent = title;
+  document.getElementById('final-sub').textContent = sub;
+  show('final-card');
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function formatDate(dateStr) {
-  const days = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
-  const d = new Date(dateStr);
-  return `יום ${days[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`;
-}
-
 function formatDatetime(dt) {
+  if (!dt) return '—';
   const d = new Date(dt);
   const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
   const time = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
   return `יום ${days[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} בשעה ${time}`;
 }
 
-function show(id) { document.getElementById(id).classList.remove('hidden'); }
-function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function formatDateHeader(dateKey) {
+  const d = new Date(dateKey + 'T12:00:00');
+  const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  return `יום ${days[d.getDay()]} — ${d.getDate()} ב${months[d.getMonth()]}`;
+}
+
+function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
 
 function showError(msg) {
   hide('loading');
   document.getElementById('error-msg').textContent = msg;
-  show('error-state');
+  show('error-card');
 }
 
 function showAlert(type, msg) {
   const area = document.getElementById('alert-area');
-  area.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
-  setTimeout(() => { area.innerHTML = ''; }, 6000);
+  area.innerHTML = `<div class="alert alert-${type}" style="max-width:460px;margin:0 auto 10px">${msg}</div>`;
+  setTimeout(() => { area.innerHTML = ''; }, 7000);
 }
 
-function setLoading(on) {
-  ['btn-confirm','btn-reschedule','btn-cancel','btn-confirm-reschedule'].forEach(id => {
+function setBusy(on) {
+  ['btn-confirm','btn-reschedule','btn-cancel','btn-confirm-slot'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = on;
   });
