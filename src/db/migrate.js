@@ -12,19 +12,55 @@ async function runMigrations() {
   try {
     logger.info('[Migration] Running DB migrations...');
 
-    // ── campaign_schedule_config: add developer branding + INFORU credentials ──
+    // ── campaign_schedule_config: ensure table exists FIRST ──
     await client.query(`
-      ALTER TABLE campaign_schedule_config
-        ADD COLUMN IF NOT EXISTS developer_name     TEXT,
-        ADD COLUMN IF NOT EXISTS inforu_username    TEXT,
-        ADD COLUMN IF NOT EXISTS inforu_password    TEXT
+      CREATE TABLE IF NOT EXISTS campaign_schedule_config (
+        id                        SERIAL PRIMARY KEY,
+        zoho_campaign_id          VARCHAR(50) UNIQUE NOT NULL,
+        project_id                VARCHAR(50),
+        meeting_type              VARCHAR(50) DEFAULT 'consultation',
+        available_windows         JSONB DEFAULT '[]',
+        slot_duration_minutes     INTEGER DEFAULT 45,
+        buffer_minutes            INTEGER DEFAULT 15,
+        reminder_delay_hours      INTEGER DEFAULT 24,
+        bot_followup_delay_hours  INTEGER DEFAULT 48,
+        pre_meeting_reminder_hours INTEGER DEFAULT 24,
+        morning_reminder_hours    INTEGER DEFAULT 2,
+        wa_initial_template       TEXT DEFAULT '',
+        wa_language               VARCHAR(5) DEFAULT 'he',
+        show_rep_name             BOOLEAN DEFAULT TRUE,
+        booking_link_expires_hours INTEGER DEFAULT 48,
+        default_start_time        VARCHAR(5) DEFAULT '09:00',
+        default_end_time          VARCHAR(5) DEFAULT '18:00',
+        developer_name            TEXT,
+        inforu_username           TEXT,
+        inforu_password           TEXT,
+        updated_at                TIMESTAMP DEFAULT NOW()
+      )
     `);
 
-    // ── bot_sessions: add developer_name + inforu_business_line if missing ──
+    // ── bot_sessions: ensure table exists FIRST ──
     await client.query(`
-      ALTER TABLE bot_sessions
-        ADD COLUMN IF NOT EXISTS developer_name        TEXT,
-        ADD COLUMN IF NOT EXISTS inforu_business_line  TEXT
+      CREATE TABLE IF NOT EXISTS bot_sessions (
+        id                    SERIAL PRIMARY KEY,
+        phone                 VARCHAR(20) NOT NULL,
+        zoho_contact_id       VARCHAR(50),
+        zoho_campaign_id      VARCHAR(50),
+        language              VARCHAR(5) DEFAULT 'he',
+        state                 VARCHAR(50) DEFAULT 'waiting',
+        context               JSONB DEFAULT '{}',
+        building_address      TEXT,
+        apartment_number      TEXT,
+        booking_token         VARCHAR(64),
+        campaign_buildings    TEXT[],
+        campaign_status       VARCHAR(50),
+        campaign_end_date     DATE,
+        developer_name        TEXT,
+        inforu_business_line  TEXT,
+        last_message_at       TIMESTAMP DEFAULT NOW(),
+        created_at            TIMESTAMP DEFAULT NOW(),
+        UNIQUE (phone, zoho_campaign_id)
+      )
     `);
 
     // ── reminder_queue: ensure table exists ──
@@ -61,55 +97,19 @@ async function runMigrations() {
       )
     `);
 
-    // ── campaign_schedule_config: ensure table exists ──
+    // ── campaign_schedule_config: add developer branding + INFORU credentials (idempotent) ──
     await client.query(`
-      CREATE TABLE IF NOT EXISTS campaign_schedule_config (
-        id                        SERIAL PRIMARY KEY,
-        zoho_campaign_id          VARCHAR(50) UNIQUE NOT NULL,
-        project_id                VARCHAR(50),
-        meeting_type              VARCHAR(50) DEFAULT 'consultation',
-        available_windows         JSONB DEFAULT '[]',
-        slot_duration_minutes     INTEGER DEFAULT 45,
-        buffer_minutes            INTEGER DEFAULT 15,
-        reminder_delay_hours      INTEGER DEFAULT 24,
-        bot_followup_delay_hours  INTEGER DEFAULT 48,
-        pre_meeting_reminder_hours INTEGER DEFAULT 24,
-        morning_reminder_hours    INTEGER DEFAULT 2,
-        wa_initial_template       TEXT DEFAULT '',
-        wa_language               VARCHAR(5) DEFAULT 'he',
-        show_rep_name             BOOLEAN DEFAULT TRUE,
-        booking_link_expires_hours INTEGER DEFAULT 48,
-        default_start_time        VARCHAR(5) DEFAULT '09:00',
-        default_end_time          VARCHAR(5) DEFAULT '18:00',
-        developer_name            TEXT,
-        inforu_username           TEXT,
-        inforu_password           TEXT,
-        updated_at                TIMESTAMP DEFAULT NOW()
-      )
+      ALTER TABLE campaign_schedule_config
+        ADD COLUMN IF NOT EXISTS developer_name     TEXT,
+        ADD COLUMN IF NOT EXISTS inforu_username    TEXT,
+        ADD COLUMN IF NOT EXISTS inforu_password    TEXT
     `);
 
-    // ── bot_sessions: ensure table exists ──
+    // ── bot_sessions: add developer_name + inforu_business_line if missing (idempotent) ──
     await client.query(`
-      CREATE TABLE IF NOT EXISTS bot_sessions (
-        id                    SERIAL PRIMARY KEY,
-        phone                 VARCHAR(20) NOT NULL,
-        zoho_contact_id       VARCHAR(50),
-        zoho_campaign_id      VARCHAR(50),
-        language              VARCHAR(5) DEFAULT 'he',
-        state                 VARCHAR(50) DEFAULT 'waiting',
-        context               JSONB DEFAULT '{}',
-        building_address      TEXT,
-        apartment_number      TEXT,
-        booking_token         VARCHAR(64),
-        campaign_buildings    TEXT[],
-        campaign_status       VARCHAR(50),
-        campaign_end_date     DATE,
-        developer_name        TEXT,
-        inforu_business_line  TEXT,
-        last_message_at       TIMESTAMP DEFAULT NOW(),
-        created_at            TIMESTAMP DEFAULT NOW(),
-        UNIQUE (phone, zoho_campaign_id)
-      )
+      ALTER TABLE bot_sessions
+        ADD COLUMN IF NOT EXISTS developer_name        TEXT,
+        ADD COLUMN IF NOT EXISTS inforu_business_line  TEXT
     `);
 
     logger.info('[Migration] All migrations completed successfully.');
