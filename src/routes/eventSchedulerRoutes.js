@@ -1,5 +1,5 @@
 /**
- * QUANTUM Event Scheduler Routes — v1.2
+ * מינהלת Event Scheduler Routes — v1.2
  *
  * Admin routes (Basic Auth protected):
  *   GET  /events/                        — list events
@@ -38,11 +38,11 @@ function adminAuth(req, res, next) {
   const expected = process.env.EVENT_BASIC_AUTH || 'Basic UVVBTlRVTTpkZDRhN2U5YS0xOWYyLTQzYjktOTM2Yy01YmQ0OTRlZWRjNWM=';
   const provided  = req.headers['authorization'] || '';
   if (provided === expected) return next();
-  res.setHeader('WWW-Authenticate', 'Basic realm="QUANTUM Events"');
-  return res.status(401).send(`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>QUANTUM</title>
+  res.setHeader('WWW-Authenticate', 'Basic realm="מינהלת Events"');
+  return res.status(401).send(`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>מינהלת</title>
 <style>body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#e0e0e0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
 .box{text-align:center}.logo{color:#4fc3f7;font-size:24px;font-weight:700;margin-bottom:12px}.msg{color:#78909c;font-size:14px}</style>
-</head><body><div class="box"><div class="logo">QUANTUM</div><div class="msg">נדרשת הרשאת כניסה</div></div></body></html>`);
+</head><body><div class="box"><div class="logo">מינהלת</div><div class="msg">נדרשת הרשאת כניסה</div></div></body></html>`);
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ async function autoImportResidents(stationId, zohoCompoundId, compoundName) {
 router.get('/pro/:token', async (req, res) => {
   try {
     const { rows: st } = await pool.query(
-      'SELECT s.*, e.title, e.event_date, e.location, e.compound_name, e.zoho_compound_id FROM event_stations s JOIN quantum_events e ON e.id=s.event_id WHERE s.token=$1',
+      'SELECT s.*, e.title, e.event_date, e.location, e.compound_name, e.zoho_compound_id FROM event_stations s JOIN minhelet_events e ON e.id=s.event_id WHERE s.token=$1',
       [req.params.token]
     );
     if (!st.length) return res.status(404).send('<h2>קישור לא תקין</h2>');
@@ -147,7 +147,7 @@ router.get('/pro/:token', async (req, res) => {
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>QUANTUM | ${esc(station.pro_name)}</title>
+<title>מינהלת | ${esc(station.pro_name)}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#e0e0e0;direction:rtl}
@@ -184,7 +184,7 @@ textarea{width:100%;background:#060d1a;border:1px solid #1e3a5f;border-radius:8p
 </head>
 <body>
 <div class="topbar">
-  <div class="logo">⚡ QUANTUM</div>
+  <div class="logo">⚡ מינהלת</div>
   <div style="font-size:12px;color:#546e7a">גישת מקצוען</div>
 </div>
 <div class="event-header">
@@ -294,7 +294,7 @@ router.post('/pro/:token/attendee/:id', async (req, res) => {
 router.get('/pro/:token/pdf', async (req, res) => {
   try {
     const { rows: st } = await pool.query(
-      'SELECT s.*, e.title, e.event_date, e.location FROM event_stations s JOIN quantum_events e ON e.id=s.event_id WHERE s.token=$1',
+      'SELECT s.*, e.title, e.event_date, e.location FROM event_stations s JOIN minhelet_events e ON e.id=s.event_id WHERE s.token=$1',
       [req.params.token]
     );
     if (!st.length) return res.status(404).send('Not found');
@@ -342,7 +342,7 @@ router.get('/attend/:token', async (req, res) => {
              sl.start_time, sl.end_time
       FROM event_attendees a
       JOIN event_stations s ON s.id = a.station_id
-      JOIN quantum_events e ON e.id = s.event_id
+      JOIN minhelet_events e ON e.id = s.event_id
       LEFT JOIN event_slots sl ON sl.id = a.slot_id
       WHERE a.token = $1
     `, [req.params.token]);
@@ -363,7 +363,7 @@ router.get('/attend/:token', async (req, res) => {
     res.type('html').send(`<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>QUANTUM | אישור פגישה</title>
+<title>מינהלת | אישור פגישה</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#e0e0e0;direction:rtl;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
@@ -383,7 +383,7 @@ body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#e0e0e0;directio
 </head>
 <body>
 <div class="card">
-  <div class="logo">⚡ QUANTUM</div>
+  <div class="logo">⚡ מינהלת</div>
   <div class="status-badge" id="statusMsg">${statusMsg}</div>
   <div class="info-row"><span class="info-label">שם</span><span class="info-value">${esc(a.name)}</span></div>
   <div class="info-row"><span class="info-label">אירוע</span><span class="info-value">${esc(a.title)}</span></div>
@@ -472,7 +472,7 @@ router.get('/', adminAuth, async (req, res) => {
       SELECT e.*,
         (SELECT COUNT(*) FROM event_stations WHERE event_id=e.id) AS station_count,
         (SELECT COUNT(*) FROM event_attendees a JOIN event_stations s ON s.id=a.station_id WHERE s.event_id=e.id) AS attendee_count
-      FROM quantum_events e ORDER BY e.event_date DESC LIMIT 50
+      FROM minhelet_events e ORDER BY e.event_date DESC LIMIT 50
     `);
     ok(res, { events: rows });
   } catch(e) { err(res, e.message); }
@@ -486,7 +486,7 @@ router.post('/', adminAuth, async (req, res) => {
     if (!title || !event_date) return err(res, 'title and event_date required', 400);
 
     const { rows } = await pool.query(
-      `INSERT INTO quantum_events (title, event_type, event_date, location, zoho_compound_id, compound_name, notes, status)
+      `INSERT INTO minhelet_events (title, event_type, event_date, location, zoho_compound_id, compound_name, notes, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,'upcoming') RETURNING *`,
       [title, event_type||'signing', event_date, location||'', zoho_compound_id||null, compound_name||'', notes||'']
     );
@@ -498,7 +498,7 @@ router.post('/', adminAuth, async (req, res) => {
 
 router.get('/:id', adminAuth, async (req, res) => {
   try {
-    const { rows: ev } = await pool.query('SELECT * FROM quantum_events WHERE id=$1', [req.params.id]);
+    const { rows: ev } = await pool.query('SELECT * FROM minhelet_events WHERE id=$1', [req.params.id]);
     if (!ev.length) return err(res, 'Not found', 404);
 
     const { rows: stations } = await pool.query(
@@ -526,7 +526,7 @@ router.get('/:id', adminAuth, async (req, res) => {
 
 router.post('/:id/stations', adminAuth, async (req, res) => {
   try {
-    const { rows: ev } = await pool.query('SELECT * FROM quantum_events WHERE id=$1', [req.params.id]);
+    const { rows: ev } = await pool.query('SELECT * FROM minhelet_events WHERE id=$1', [req.params.id]);
     if (!ev.length) return err(res, 'Event not found', 404);
 
     const { pro_name, pro_role, pro_phone, pro_email } = req.body;
@@ -649,7 +649,7 @@ router.post('/:id/stations/:sid/assign', adminAuth, async (req, res) => {
 
 router.get('/:id/report', adminAuth, async (req, res) => {
   try {
-    const { rows: ev } = await pool.query('SELECT * FROM quantum_events WHERE id=$1', [req.params.id]);
+    const { rows: ev } = await pool.query('SELECT * FROM minhelet_events WHERE id=$1', [req.params.id]);
     if (!ev.length) return err(res, 'Not found', 404);
 
     const { rows: stations } = await pool.query(

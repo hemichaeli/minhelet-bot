@@ -1,5 +1,5 @@
 /**
- * QUANTUM Calendar Management Routes
+ * מינהלת Calendar Management Routes
  *
  * Google Calendar:
  * GET  /api/scheduling/calendar/status              - Check GCal config
@@ -116,10 +116,10 @@ router.post('/test-event', async (req, res) => {
   if (!gcalService?.isConfigured()) return res.status(503).json({ ok: false, error: 'Google Calendar not configured' });
   const start = new Date(Date.now() + 60 * 60 * 1000);
   const eventId = await gcalService.createEvent(calendarId, {
-    title: '🧪 QUANTUM - בדיקת חיבור לוח שנה',
+    title: '🧪 מינהלת - בדיקת חיבור לוח שנה',
     startDatetime: start.toISOString(),
     durationMins: 15,
-    description: 'Test event created by QUANTUM system. Can be deleted.'
+    description: 'Test event created by מינהלת system. Can be deleted.'
   });
   if (eventId) {
     res.json({ ok: true, eventId, calendarId, message: 'Test event created successfully!' });
@@ -386,8 +386,8 @@ router.post('/zoho/test-event', async (req, res) => {
   try {
     const start = new Date(Date.now() + 60 * 60 * 1000);
     const uid = await zcalService.createEvent(calendarId, {
-      title: '🧪 QUANTUM - בדיקת לוח שנה Zoho', startDatetime: start.toISOString(),
-      durationMins: 15, description: 'Test event created by QUANTUM system. Can be deleted.'
+      title: '🧪 מינהלת - בדיקת לוח שנה Zoho', startDatetime: start.toISOString(),
+      durationMins: 15, description: 'Test event created by מינהלת system. Can be deleted.'
     });
     if (uid) { res.json({ ok: true, uid, calendarId, message: 'Zoho Calendar test event created!' }); }
     else { res.json({ ok: false, calendarId, message: 'Failed to create event - check Zoho OAuth token and scope' }); }

@@ -1,5 +1,5 @@
 /**
- * QUANTUM AI Sales Bot - Advanced Flow with Competition Handling
+ * מינהלת AI Bot - Advanced Flow
  * Uses Claude AI for dynamic sales conversations
  */
 
@@ -35,7 +35,7 @@ async function callClaude(systemPrompt, userPrompt) {
   return response.data.content[0].text;
 }
 
-const SALES_SYSTEM_PROMPT = `אתה QUANTUM Sales AI - המתווך הדיגיטלי החכם ביותר בישראל.
+const SALES_SYSTEM_PROMPT = `אתה מינהלת Sales AI - המתווך הדיגיטלי החכם ביותר בישראל.
 לא סתם bot - נציג מכירות מבריק שמשלב AI עם חוכמת מכירות.
 
 תכונות אישיות מכירות:
@@ -56,7 +56,7 @@ const SALES_SYSTEM_PROMPT = `אתה QUANTUM Sales AI - המתווך הדיגיט
 
 OPEN FIELD (אין מתווך):
 "מעולה! יש לך יתרון - תוכל לבחור את הטובים ביותר מההתחלה.
-ב-QUANTUM יש לנו [ערך מיידי]:
+ב-מינהלת יש לנו [ערך מיידי]:
 • מוכר: גישה לקונים רציניים שחיפשו בדיוק מה שיש לך
 • קונה: נכסים שאחרים אפילו לא יודעים שקיימים
 המומחה שלנו יכול לפגוש אותך השבוע. מתי נוח?"
@@ -116,7 +116,7 @@ Red Flags לפסילה:
 - "בעוד שנה" → פסול  
 
 המטרה: להפוך כל שיחה למכירה או לפחות לפגישה איכותית. 
-אתה QUANTUM Sales Machine! 🎯`;
+אתה מינהלת Sales Machine! 🎯`;
 
 function parseParams(parameters) {
   const params = {};
@@ -331,7 +331,7 @@ router.get('/health', (req, res) => {
   const base = 'https://pinuy-binuy-analyzer-production.up.railway.app';
   res.json({
     status: 'ok', 
-    bot: 'QUANTUM AI Sales Bot v3.0',
+    bot: 'מינהלת AI Sales Bot v3.0',
     features: ['AI_SALES_FLOW', 'COMPETITION_HANDLING', 'DYNAMIC_CLOSING'],
     endpoints: {
       webservice: `${base}/api/bot/webservice`,

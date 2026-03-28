@@ -1,5 +1,5 @@
 /**
- * QUANTUM Scheduling Routes v4
+ * מינהלת Scheduling Routes v4
  *
  * GET  /api/scheduling/admin                                - Campaign Admin Panel (UI)
  * POST /api/scheduling/demo-link                            - Generate real booking URL for demo/testing
@@ -694,10 +694,10 @@ router.get('/campaign/:campaignId/report', async (req, res) => {
 
     res.type('text/html').send(`<!DOCTYPE html>
 <html dir="rtl" lang="he"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>דוח קמפיין QUANTUM - ${data.projectName}</title>
+<title>דוח קמפיין מינהלת - ${data.projectName}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;background:#0a0a0f;color:#e2e8f0;direction:rtl}.header{background:linear-gradient(135deg,#1e3a5f,#0d1b2e);padding:32px 24px;border-bottom:1px solid #1e40af44}.logo{font-size:13px;letter-spacing:4px;color:#60a5fa;text-transform:uppercase;margin-bottom:8px}h1{font-size:22px;color:#f1f5f9;font-weight:700}.meta{font-size:12px;color:#94a3b8;margin-top:6px}.container{max-width:960px;margin:0 auto;padding:24px 16px}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:20px 0}.kpi{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:16px;text-align:center}.kpi-val{font-size:28px;font-weight:800}.kpi-val.green{color:#34d399}.kpi-val.blue{color:#60a5fa}.kpi-val.yellow{color:#fbbf24}.kpi-val.red{color:#f87171}.kpi-label{font-size:11px;color:#64748b;margin-top:4px}.section{background:#111827;border:1px solid #1e293b;border-radius:12px;padding:20px;margin:16px 0}.section h2{font-size:14px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px;border-bottom:1px solid #1e293b;padding-bottom:10px}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:right;padding:8px 10px;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px;background:#0f172a}td{padding:9px 10px;border-bottom:1px solid #1e293b}tr:last-child td{border-bottom:none}.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}.badge-green{background:#064e3b;color:#34d399}.badge-blue{background:#1e3a5f;color:#60a5fa}</style>
 </head><body>
-<div class="header"><div class="logo">⚡ QUANTUM Intelligence</div><h1>דוח קמפיין: ${data.projectName}</h1><div class="meta">סוג: ${data.meetingType} | נוצר: ${new Date(data.generatedAt).toLocaleString('he-IL')} | <a href="?format=json" style="color:#60a5fa">JSON</a></div></div>
+<div class="header"><div class="logo">⚡ מינהלת Intelligence</div><h1>דוח קמפיין: ${data.projectName}</h1><div class="meta">סוג: ${data.meetingType} | נוצר: ${new Date(data.generatedAt).toLocaleString('he-IL')} | <a href="?format=json" style="color:#60a5fa">JSON</a></div></div>
 <div class="container">
 <div class="kpis">
   <div class="kpi"><div class="kpi-val blue">${data.summary.totalSent}</div><div class="kpi-label">נשלחו</div></div>

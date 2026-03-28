@@ -1,5 +1,5 @@
 /**
- * QUANTUM Schedule Optimization Service v1
+ * מינהלת Schedule Optimization Service v1
  *
  * Runs the evening before appointments (default 20:00).
  * Identifies "isolated" confirmed slots and offers contacts a better time.
@@ -38,7 +38,7 @@ const STRINGS = {
   he: {
     offer: (name, origTime, propTime, propDate) =>
       `שלום ${name} 👋\n` +
-      `תזכורת: יש לך פגישה עם QUANTUM מחר ב-⏰ *${origTime}*.\n\n` +
+      `תזכורת: יש לך פגישה עם מינהלת מחר ב-⏰ *${origTime}*.\n\n` +
       `💡 יש לנו מועד שנוח יותר גם לנו:\n` +
       `📅 *${propDate}* ⏰ *${propTime}*\n\n` +
       `האם תרצה לעבור למועד הזה?\n` +
@@ -56,7 +56,7 @@ const STRINGS = {
   ru: {
     offer: (name, origTime, propTime, propDate) =>
       `Здравствуйте, ${name} 👋\n` +
-      `Напоминание: завтра встреча с QUANTUM в ⏰ *${origTime}*.\n\n` +
+      `Напоминание: завтра встреча с מינהלת в ⏰ *${origTime}*.\n\n` +
       `💡 У нас есть более удобное время:\n` +
       `📅 *${propDate}* ⏰ *${propTime}*\n\n` +
       `Хотите перенести?\n` +
@@ -240,7 +240,7 @@ async function sendRescheduleOffers(campaignId) {
       // Send WhatsApp free-text chat message (sendWhatsAppChat, NOT sendWhatsApp which requires a template key)
       const msg = S.offer(name, origTime, propTime, propDate);
       await inforuService.sendWhatsAppChat(originalSlot.contact_phone, msg, {
-        customerParameter: 'QUANTUM_RESCHEDULE',
+        customerParameter: 'MINHELET_RESCHEDULE',
         customerMessageId: `reschedule_${reqId}_${Date.now()}`
       });
 

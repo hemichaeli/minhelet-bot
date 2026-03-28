@@ -1,5 +1,5 @@
 /**
- * QUANTUM Zoho Scheduling Service
+ * מינהלת Zoho Scheduling Service
  * Writes bot conversation results back to Zoho CRM in real-time:
  *  - Creates incoming message records (הודעות נכנסות) in the campaign
  *  - Updates contact status in campaign (confirmed / declined / pending / no_answer)
@@ -185,7 +185,7 @@ async function logAsContactNote(contactId, campaignId, content) {
   try {
     await zohoRequest('POST', `/Notes`, {
       data: [{
-        Note_Title: `QUANTUM BOT - קמפיין ${campaignId}`,
+        Note_Title: `מינהלת BOT - קמפיין ${campaignId}`,
         Note_Content: content,
         Parent_Id: { id: contactId },
         se_module: 'Contacts'
@@ -201,11 +201,11 @@ async function createMeetingActivity({ contactId, campaignId, meetingType, meeti
   if (!contactId) return null;
 
   const TYPE_LABELS = {
-    consultation: 'פגישת ייעוץ - QUANTUM',
-    physical: 'פגישה פיזית - QUANTUM',
-    appraiser: 'ביקור שמאי - QUANTUM',
-    surveyor: 'ביקור מודד - QUANTUM',
-    signing_ceremony: 'כנס חתימות - QUANTUM'
+    consultation: 'פגישת ייעוץ - מינהלת',
+    physical: 'פגישה פיזית - מינהלת',
+    appraiser: 'ביקור שמאי - מינהלת',
+    surveyor: 'ביקור מודד - מינהלת',
+    signing_ceremony: 'כנס חתימות - מינהלת'
   };
 
   try {

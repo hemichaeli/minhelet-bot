@@ -1,7 +1,7 @@
 const { logger } = require('./logger');
 
 // ============================================================
-// QUANTUM Notification Service - SSE-based real-time alerts
+// מינהלת Notification Service - SSE-based real-time alerts
 // ============================================================
 // Events: new_lead, new_message, hot_opportunity, system_alert
 // Usage: notificationService.broadcast('new_lead', { name, phone, budget })

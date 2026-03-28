@@ -37,7 +37,7 @@ const SMS_TEMPLATES = {
 };
 
 // --- WhatsApp Templates (מינהלת account - capi.inforu.co.il) ---
-// Updated 2026-03-28: cleaned QUANTUM references, added minhelet templates
+// Updated 2026-03-28: cleaned מינהלת references, added minhelet templates
 const WA_TEMPLATES = {
   // ---- scheduling / bot templates ----
   meeting_invite:         { templateId: '141183', name: 'הזמנה למפגש נציגות',                                    params: [], hasButtons: false },
@@ -108,7 +108,7 @@ const WA_TEMPLATES = {
 };
 
 // Legacy mapping (kept for backward compatibility)
-const QUANTUM_WA_MAPPINGS = {
+const מינהלת_WA_MAPPINGS = {
   test_message: 'test_message'
 };
 
@@ -198,7 +198,7 @@ async function sendSms(recipients, message, options = {}) {
 // ==================== WHATSAPP ====================
 
 async function sendWhatsApp(recipients, templateKey, variables = {}, options = {}) {
-  const actualTemplateKey = QUANTUM_WA_MAPPINGS[templateKey] || templateKey;
+  const actualTemplateKey = מינהלת_WA_MAPPINGS[templateKey] || templateKey;
   const tmpl = WA_TEMPLATES[actualTemplateKey];
   if (!tmpl) throw new Error(`WhatsApp template "${templateKey}" -> "${actualTemplateKey}" not found`);
   const phones = (Array.isArray(recipients) ? recipients : [recipients]).map(normalizePhoneLocal).filter(Boolean);
@@ -470,7 +470,7 @@ async function sendDualChannel(recipients, templateKey, variables = {}, options 
   const results = { sms: null, whatsapp: null };
   try { const smsMessage = fillTemplate(templateKey, variables); results.sms = await sendSms(recipients, smsMessage, options); }
   catch (err) { results.sms = { success: false, error: err.message, channel: 'sms' }; }
-  if (QUANTUM_WA_MAPPINGS[templateKey] || WA_TEMPLATES[templateKey]) {
+  if (מינהלת_WA_MAPPINGS[templateKey] || WA_TEMPLATES[templateKey]) {
     try { results.whatsapp = await sendWhatsApp(recipients, templateKey, variables, options); }
     catch (err) { results.whatsapp = { success: false, error: err.message, channel: 'whatsapp' }; }
   }
@@ -582,5 +582,5 @@ module.exports = {
   sendDualChannel, bulkSend,
   normalizePhone, normalizePhoneLocal,
   getStats, checkAccountStatus,
-  SMS_TEMPLATES, WA_TEMPLATES, QUANTUM_WA_MAPPINGS
+  SMS_TEMPLATES, WA_TEMPLATES, מינהלת_WA_MAPPINGS
 };

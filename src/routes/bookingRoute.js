@@ -1,5 +1,5 @@
 /**
- * QUANTUM Visual Booking Route v6.7
+ * מינהלת Visual Booking Route v6.7
  *
  * v6.2: Fix clicks not working — data-slot-id + JSON slot map
  * v6.3: Responsive desktop layout — two columns, bigger slots, sidebar confirm panel
@@ -207,7 +207,7 @@ router.get('/:token', async (req, res) => {
     }
     const expiresHours = session.booking_link_expires_hours || 48;
     if (Date.now() - new Date(session.created_at).getTime() > expiresHours * 3600000) {
-      return res.type('html').send(errorPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', 'This booking link has expired. Please contact QUANTUM.'));
+      return res.type('html').send(errorPage('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', 'This booking link has expired. Please contact מינהלת.'));
     }
     const ctx = typeof session.context === 'string' ? JSON.parse(session.context) : (session.context || {});
     const isCeremony = session.meeting_type === 'signing_ceremony';
@@ -362,12 +362,12 @@ router.post('/:token/confirm', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 
 function errorPage(titleHe, msgEn) {
-  return `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QUANTUM</title>
+  return `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>מינהלת</title>
 <style>body{font-family:system-ui;background:#0a0a0f;color:#e2e8f0;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;margin:0}
 .box{background:#111827;border:1px solid #1e293b;border-radius:16px;padding:40px;max-width:320px}
 .logo{color:#60a5fa;font-size:11px;letter-spacing:4px;margin-bottom:16px}
 h2{color:#f87171;font-size:18px;margin-bottom:8px}p{color:#94a3b8;font-size:14px}</style>
-</head><body><div class="box"><div class="logo">&#x26A1; QUANTUM</div><h2>${titleHe}</h2><p>${msgEn}</p></div></body></html>`;
+</head><body><div class="box"><div class="logo">&#x26A1; מינהלת</div><h2>${titleHe}</h2><p>${msgEn}</p></div></body></html>`;
 }
 
 function alreadyBookedPage(lang, slot) {
@@ -376,12 +376,12 @@ function alreadyBookedPage(lang, slot) {
   const msg = isRu
     ? `\u0412\u044b \u0443\u0436\u0435 \u0437\u0430\u043f\u0438\u0441\u0430\u043d\u044b \u043d\u0430 ${slot.dateStr || slot.date_str || ''} \u0432 ${slot.timeStr || slot.time || ''}`
     : `\u05db\u05d1\u05e8 \u05e0\u05e7\u05d1\u05e2\u05ea\u05dd \u05dc-${slot.dateStr || slot.date_str || ''} \u05d1\u05e9\u05e2\u05d4 ${slot.timeStr || slot.time || ''}`;
-  return `<!DOCTYPE html><html dir="${isRu ? 'ltr' : 'rtl'}" lang="${lang}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QUANTUM</title>
+  return `<!DOCTYPE html><html dir="${isRu ? 'ltr' : 'rtl'}" lang="${lang}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>מינהלת</title>
 <style>body{font-family:system-ui;background:#0a0a0f;color:#e2e8f0;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;margin:0}
 .box{background:#111827;border:1px solid #064e3b;border-radius:16px;padding:40px;max-width:320px}
 .logo{color:#60a5fa;font-size:11px;letter-spacing:4px;margin-bottom:16px}
 h2{color:#34d399;font-size:18px;margin-bottom:8px}p{color:#94a3b8;font-size:14px}</style>
-</head><body><div class="box"><div class="logo">&#x26A1; QUANTUM</div><h2>${title}</h2><p>${msg}</p></div></body></html>`;
+</head><body><div class="box"><div class="logo">&#x26A1; מינהלת</div><h2>${title}</h2><p>${msg}</p></div></body></html>`;
 }
 
 function calendarPage(token, name, lang, config, grouped, isCeremony, buildingLabel, smartPicks, allSlots) {
@@ -509,7 +509,7 @@ function calendarPage(token, name, lang, config, grouped, isCeremony, buildingLa
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>QUANTUM</title>
+<title>מינהלת</title>
 <style>
   :root{--blue:#3b82f6;--blue-dark:#1d4ed8;--green:#10b981;--amber:#f59e0b;--dark:#07080f;--card:#0f1623;--card2:#111827;--border:#1e293b;--text:#e2e8f0;--muted:#64748b;--sidebar:320px}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -617,7 +617,7 @@ function calendarPage(token, name, lang, config, grouped, isCeremony, buildingLa
   <div class="header-inner">
     <div class="header-brand">
       <span class="logo-mark">&#x26A1;</span>
-      <span class="logo-text">QUANTUM</span>
+      <span class="logo-text">מינהלת</span>
     </div>
     <div class="header-info">
       <div class="header-title">${T.heading}</div>
@@ -643,7 +643,7 @@ function calendarPage(token, name, lang, config, grouped, isCeremony, buildingLa
           <span class="sidebar-cancel-link" id="sidebarCancelBtn">&#x21A9; ${T.cancel}</span>
         </div>
         <div class="sidebar-brand">
-          <div class="sidebar-brand-logo">&#x26A1; QUANTUM</div>
+          <div class="sidebar-brand-logo">&#x26A1; מינהלת</div>
           <div class="sidebar-brand-tagline">${lang === 'ru' ? '\u0411\u0443\u0442\u0438\u043a\u043e\u0432\u043e\u0435 \u0430\u0433\u0435\u043d\u0442\u0441\u0442\u0432\u043e \u043d\u0435\u0434\u0432\u0438\u0436\u0438\u043c\u043e\u0441\u0442\u0438' : '\u05ea\u05d9\u05d5\u05d5\u05db \u05e0\u05d3\u05dc\u05df \u05de\u05d5\u05d1\u05d7\u05e8 \u05d1\u05e4\u05d9\u05e0\u05d5\u05d9-\u05d1\u05d9\u05e0\u05d5\u05d9'}</div>
         </div>
       </div>

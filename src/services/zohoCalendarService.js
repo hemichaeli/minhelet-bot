@@ -1,5 +1,5 @@
 /**
- * QUANTUM Zoho Calendar Service
+ * מינהלת Zoho Calendar Service
  *
  * Creates and deletes Zoho Calendar events when bookings are confirmed / cancelled.
  * Uses the same ZOHO_REFRESH_TOKEN / CLIENT_ID / CLIENT_SECRET as CRM.
@@ -170,7 +170,7 @@ async function createMeetingSlotEvent(pool, slot, contactName, contactPhone) {
     const typeLabel = MEETING_TYPE_LABELS[slot.meeting_type] || 'פגישה';
 
     return await createEvent(row.zoho_calendar_id, {
-      title:         `📅 ${typeLabel} - ${contactName} | QUANTUM`,
+      title:         `📅 ${typeLabel} - ${contactName} | מינהלת`,
       startDatetime: slot.slot_datetime,
       durationMins:  slot.duration_minutes || 45,
       description:   [

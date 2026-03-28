@@ -1,9 +1,9 @@
 /**
- * QUANTUM WA Bot Escalation Service
+ * מינהלת WA Bot Escalation Service
  * v1.0.0
  *
  * When an inbound WA bot lead goes silent (no reply for X minutes after bot's last message),
- * auto-trigger a Vapi call from "רן מ-QUANTUM"
+ * auto-trigger a Vapi call from "נציג מינהלת"
  *
  * Setting: system_settings WHERE key = 'wa_bot_escalation_minutes' (0 = disabled)
  */

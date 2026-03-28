@@ -290,7 +290,7 @@ router.post('/:id/confirm', async (req, res) => {
 
     // Send confirmation WhatsApp
     if (appt.phone && slot) {
-      const confirmMsg = `מעולה! הפגישה אושרה ל${formatSlotForWhatsApp(slot)}.\nנשמח לדבר איתך ולהכיר 😊\nצוות QUANTUM`;
+      const confirmMsg = `מעולה! הפגישה אושרה ל${formatSlotForWhatsApp(slot)}.\nנשמח לדבר איתך ולהכיר 😊\nצוות מינהלת`;
       await sendWhatsApp(appt.phone, confirmMsg).catch(e => console.warn('[Appointments] confirm WA error:', e.message));
     }
 
@@ -371,7 +371,7 @@ router.post('/webhook/reply', async (req, res) => {
     await pool.query(`UPDATE appointment_slots SET is_available = false WHERE id = $1`, [chosenSlot.id]);
 
     // Confirm WhatsApp
-    const confirmMsg = `מעולה! קיבלנו את בחירתך.\nהפגישה אושרה ל${formatSlotForWhatsApp(chosenSlot)}.\nנשמח להכיר! 😊\nצוות QUANTUM`;
+    const confirmMsg = `מעולה! קיבלנו את בחירתך.\nהפגישה אושרה ל${formatSlotForWhatsApp(chosenSlot)}.\nנשמח להכיר! 😊\nצוות מינהלת`;
     await sendWhatsApp(phone, confirmMsg);
 
     res.json({ success: true, confirmed: true, slot: chosenSlot });

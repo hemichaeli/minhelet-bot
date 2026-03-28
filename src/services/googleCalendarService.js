@@ -1,5 +1,5 @@
 /**
- * QUANTUM Google Calendar Service
+ * מינהלת Google Calendar Service
  *
  * Creates, updates, and deletes Google Calendar events
  * when bookings are confirmed / cancelled.
@@ -366,7 +366,7 @@ async function createMeetingSlotEvent(pool, slot, contactName, contactPhone) {
     const typeLabel = MEETING_TYPE_LABELS[slot.meeting_type] || 'פגישה';
 
     const eventId = await createEvent(calendarId, {
-      title: `📅 ${typeLabel} - ${contactName} | QUANTUM`,
+      title: `📅 ${typeLabel} - ${contactName} | מינהלת`,
       startDatetime: slot.slot_datetime,
       durationMins: slot.duration_minutes || 45,
       description: [

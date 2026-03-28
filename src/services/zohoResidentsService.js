@@ -1,5 +1,5 @@
 /**
- * QUANTUM Zoho Service — Event Scheduler
+ * מינהלת Zoho Service — Event Scheduler
  * שליפת מתחמים / בניינים / דיירים מ-Zoho CRM
  *
  * מבנה Zoho:

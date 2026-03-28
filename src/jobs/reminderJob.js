@@ -1,5 +1,5 @@
 /**
- * QUANTUM Reminder Job v2.0
+ * מינהלת Reminder Job v2.0
  *
  * Runs every minute, processes reminder_queue.
  *
@@ -46,31 +46,31 @@ const MEETING_TYPE_LABELS = {
 const STRINGS = {
   he: {
     reminder_24h: (name, campaign) =>
-      `שלום ${name} 👋\nQUANTUM כאן.\n\nעדיין לא קיבלנו ממך תשובה לגבי *${campaign}*.\nענה/י *1* ונתאם עכשיו.`,
+      `שלום ${name} 👋\nמינהלת כאן.\n\nעדיין לא קיבלנו ממך תשובה לגבי *${campaign}*.\nענה/י *1* ונתאם עכשיו.`,
     bot_followup_48h: (name, campaign) =>
-      `שלום ${name} 👋\nQUANTUM שוב.\n\nזו ההזדמנות האחרונה לתאם את *${campaign}*.\nענה/י *1* ונסגור מיד.`,
+      `שלום ${name} 👋\nמינהלת שוב.\n\nזו ההזדמנות האחרונה לתאם את *${campaign}*.\nענה/י *1* ונסגור מיד.`,
     pre_meeting_24h: (name, type, date, time) =>
       `שלום ${name} 👋\n*תזכורת:* ${type} מחר\n📅 ${date} ⏰ ${time}\n\nלביטול/שינוי - ענה/י 0.`,
     pre_meeting_2h: (name, type, time) =>
       `שלום ${name} 👋\nבעוד כ-2 שעות: *${type}* ב-⏰ ${time}\n\nנתראה! 🤝`,
     no_reply_reminder_1: (name, typeLabel, url) =>
-      `שלום ${name} 👋\nQUANTUM כאן.\n\nשלחנו לך הודעה בנוגע ל${typeLabel} — עדיין לא קיבלנו ממך תגובה.\n\n📅 לבחירת מועד נוח, לחץ/י:\n${url}\n\nהקישור תקף 48 שעות.`,
+      `שלום ${name} 👋\nמינהלת כאן.\n\nשלחנו לך הודעה בנוגע ל${typeLabel} — עדיין לא קיבלנו ממך תגובה.\n\n📅 לבחירת מועד נוח, לחץ/י:\n${url}\n\nהקישור תקף 48 שעות.`,
     no_reply_reminder_2: (name, typeLabel, url) =>
-      `שלום ${name} 👋\nQUANTUM שוב.\n\n⚠️ לא תיאמת עדיין ${typeLabel}.\nזו הודעה אחרונה — אחרי זה נתקשר אליך.\n\n📅 לתיאום מהיר:\n${url}`,
+      `שלום ${name} 👋\nמינהלת שוב.\n\n⚠️ לא תיאמת עדיין ${typeLabel}.\nזו הודעה אחרונה — אחרי זה נתקשר אליך.\n\n📅 לתיאום מהיר:\n${url}`,
   },
   ru: {
     reminder_24h: (name, campaign) =>
-      `Здравствуйте, ${name} 👋\nQUANTUM на связи.\n\nМы ещё не получили ваш ответ по *${campaign}*.\nНажмите *1* для записи.`,
+      `Здравствуйте, ${name} 👋\nמינהלת на связи.\n\nМы ещё не получили ваш ответ по *${campaign}*.\nНажмите *1* для записи.`,
     bot_followup_48h: (name, campaign) =>
-      `Здравствуйте, ${name} 👋\nQUANTUM снова.\n\nПоследний шанс записаться на *${campaign}*.\nНажмите *1* прямо сейчас.`,
+      `Здравствуйте, ${name} 👋\nמינהלת снова.\n\nПоследний шанс записаться на *${campaign}*.\nНажмите *1* прямо сейчас.`,
     pre_meeting_24h: (name, type, date, time) =>
       `Здравствуйте, ${name} 👋\n*Напоминание:* ${type} завтра\n📅 ${date} ⏰ ${time}\n\nДля отмены/переноса - ответьте 0.`,
     pre_meeting_2h: (name, type, time) =>
       `Здравствуйте, ${name} 👋\nЧерез ~2 часа: *${type}* в ⏰ ${time}\n\nДо встречи! 🤝`,
     no_reply_reminder_1: (name, typeLabel, url) =>
-      `Здравствуйте, ${name} 👋\nQUANTUM на связи.\n\nМы отправляли вам сообщение насчёт ${typeLabel} — ответа не получили.\n\n📅 Запишитесь по ссылке:\n${url}\n\nСсылка действует 48 часов.`,
+      `Здравствуйте, ${name} 👋\nמינהלת на связи.\n\nМы отправляли вам сообщение насчёт ${typeLabel} — ответа не получили.\n\n📅 Запишитесь по ссылке:\n${url}\n\nСсылка действует 48 часов.`,
     no_reply_reminder_2: (name, typeLabel, url) =>
-      `Здравствуйте, ${name} 👋\nQUANTUM снова.\n\n⚠️ Вы ещё не записались на ${typeLabel}.\nПоследнее сообщение — после этого мы позвоним.\n\n📅 Запишитесь:\n${url}`,
+      `Здравствуйте, ${name} 👋\nמינהלת снова.\n\n⚠️ Вы ещё не записались на ${typeLabel}.\nПоследнее сообщение — после этого мы позвоним.\n\n📅 Запишитесь:\n${url}`,
   }
 };
 
@@ -347,8 +347,8 @@ async function handleSchedulingVapiCall(reminder, data) {
       const mt        = data.meetingType || '';
       const typeLabel = (MEETING_TYPE_LABELS[lang] || MEETING_TYPE_LABELS.he)[mt] || 'הפגישה';
       const msg = lang === 'ru'
-        ? `Здравствуйте, ${data.contactName || ''} 👋\nQUANTUM: мы не смогли дозвониться. Запишитесь на ${typeLabel}:\n${url}`
-        : `שלום ${data.contactName || ''} 👋\nQUANTUM: ניסינו להתקשר. תאם/י ${typeLabel}:\n${url}`;
+        ? `Здравствуйте, ${data.contactName || ''} 👋\nמינהלת: мы не смогли дозвониться. Запишитесь на ${typeLabel}:\n${url}`
+        : `שלום ${data.contactName || ''} 👋\nמינהלת: ניסינו להתקשר. תאם/י ${typeLabel}:\n${url}`;
       await inforuService.sendWhatsApp(phone, msg).catch(() => {});
     }
     return;
@@ -381,7 +381,7 @@ async function handleSchedulingVapiCall(reminder, data) {
       ? `\nПроект: ${extraContext.projectName}.\nДата: ${extraContext.ceremonyDate}.\nМесто: ${extraContext.ceremonyLocation || 'уточнить'}.`
       : extraContext.buildingAddress ? `\nАдрес объекта: ${extraContext.buildingAddress}.` : '';
 
-    systemPrompt = `Вы представитель компании QUANTUM (пинуй-бинуй, реновация зданий в Израиле).
+    systemPrompt = `Вы представитель компании מינהלת (пинуй-бинуй, реновация зданий в Израиле).
 Имя клиента: ${contactName || 'клиент'}.
 Цель звонка: записать клиента на ${meetingLabel}.${eventInfo}
 ${slotsText ? `Доступные слоты: ${slotsText}.` : 'Уточните время у клиента.'}
@@ -390,13 +390,13 @@ ${slotsText ? `Доступные слоты: ${slotsText}.` : 'Уточните
 Когда клиент выбирает время — вызовите инструмент bookSlot с параметром time_str в формате ЧЧ:ММ.
 Говорите кратко, по-деловому. Максимум 2 минуты. Язык: русский.`;
 
-    firstMessage = `Здравствуйте${contactName ? `, ${contactName}` : ''}! Это QUANTUM. Мы несколько раз отправляли вам сообщение о ${meetingLabel}. Вам удобно поговорить?`;
+    firstMessage = `Здравствуйте${contactName ? `, ${contactName}` : ''}! Это מינהלת. Мы несколько раз отправляли вам сообщение о ${meetingLabel}. Вам удобно поговорить?`;
   } else {
     const eventInfo = extraContext.projectName
       ? `\nשם הפרויקט: ${extraContext.projectName}.\nתאריך: ${extraContext.ceremonyDate}.\nמיקום: ${extraContext.ceremonyLocation || 'יועבר בנפרד'}.`
       : extraContext.buildingAddress ? `\nבניין: ${extraContext.buildingAddress}.` : '';
 
-    systemPrompt = `אתה נציג QUANTUM נדלן, חברה המתמחה בפינוי-בינוי.
+    systemPrompt = `אתה נציג מינהלת נדלן, חברה המתמחה בפינוי-בינוי.
 שם הדייר: ${contactName || 'שלום'}.
 מטרת השיחה: לתאם ${meetingLabel}.${eventInfo}
 ${slotsText ? `מועדים פנויים: ${slotsText}.` : 'יש לברר מועד מתאים עם הדייר.'}
@@ -404,7 +404,7 @@ ${slotsText ? `מועדים פנויים: ${slotsText}.` : 'יש לברר מוע
 כשהדייר בוחר מועד — קרא לכלי bookSlot עם הפרמטר time_str בפורמט HH:MM.
 שיחה קצרה ועניינית, עד 2 דקות. שפה: עברית.`;
 
-    firstMessage = `שלום${contactName ? ` ${contactName}` : ''}! כאן QUANTUM. שלחנו לך כמה הודעות בנוגע ל${meetingLabel}. נוח לך לדבר רגע?`;
+    firstMessage = `שלום${contactName ? ` ${contactName}` : ''}! כאן מינהלת. שלחנו לך כמה הודעות בנוגע ל${meetingLabel}. נוח לך לדבר רגע?`;
   }
 
   try {
@@ -428,7 +428,7 @@ ${slotsText ? `מועדים פנויים: ${slotsText}.` : 'יש לברר מוע
           agent_type:      'scheduling_followup',
           campaign_id:     zoho_campaign_id,
           contact_id:      zoho_contact_id,
-          quantum_source:  'no_reply_vapi_call'
+          minhelet_source:  'no_reply_vapi_call'
         }
       }
     }, {
@@ -487,12 +487,12 @@ async function handleRescheduleCall(reminder, data) {
     : `+${normalized}`;
 
   const systemPromptOverride = lang === 'ru'
-    ? `Вы представитель QUANTUM. Имя клиента: ${name || 'клиент'}.
+    ? `Вы представитель מינהלת. Имя клиента: ${name || 'клиент'}.
 Вы позвонили, потому что предложили перенести встречу.
 Текущее время: ${origTime}. Предложенное: ${propTime} (${propDate}).
 Спросите: "Хотите перенести встречу на ${propTime}? Нажмите 1 — да, 2 — нет".
 Язык: русский. Разговор короткий, до 1 минуты.`
-    : `אתה נציג QUANTUM. שם הלקוח: ${name || 'שלום'}.
+    : `אתה נציג מינהלת. שם הלקוח: ${name || 'שלום'}.
 התקשרת כי הצעת לשנות פגישה.
 המועד הנוכחי: ${origTime}. הצעת: ${propTime} (${propDate}).
 שאל: "האם תרצה לעבור ל-${propTime}? ענה 1 - כן, 2 - לא".
@@ -505,13 +505,13 @@ async function handleRescheduleCall(reminder, data) {
       customer: { number: intlPhone, name: name || undefined },
       assistantOverrides: {
         firstMessage: lang === 'ru'
-          ? `Здравствуйте${name ? `, ${name}` : ''}! Это QUANTUM. Я звоню по поводу переноса встречи на ${propTime}. Удобно говорить?`
-          : `שלום${name ? ` ${name}` : ''}! כאן QUANTUM. אני מתקשר לגבי העברת הפגישה ל-${propTime}. נוח לדבר?`,
+          ? `Здравствуйте${name ? `, ${name}` : ''}! Это מינהלת. Я звоню по поводу переноса встречи на ${propTime}. Удобно говорить?`
+          : `שלום${name ? ` ${name}` : ''}! כאן מינהלת. אני מתקשר לגבי העברת הפגישה ל-${propTime}. נוח לדבר?`,
         model: { messages: [{ role: 'system', content: systemPromptOverride }] },
         metadata: {
           reschedule_request_id,
           campaign_id: zoho_campaign_id,
-          quantum_source: 'reschedule_vapi_fallback'
+          minhelet_source: 'reschedule_vapi_fallback'
         }
       }
     }, {
