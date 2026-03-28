@@ -3,7 +3,7 @@ const pool = require('../db/pool');
 const { logger } = require('./logger');
 
 /**
- * INFORU SMS + WhatsApp Service for QUANTUM
+ * INFORU SMS + WhatsApp Service for מינהלת
  * SMS: UAPI XML endpoint
  * WhatsApp: CAPI v2 REST endpoint
  */
@@ -14,30 +14,30 @@ const DEFAULT_SENDER = '037572229';
 
 // --- SMS Templates (free-text) ---
 const SMS_TEMPLATES = {
-  seller_initial: {
-    name: 'פנייה ראשונית למוכר',
-    template: `שלום {name},\nראיתי שיש לך נכס למכירה ב{address}, {city}.\nאני מ-QUANTUM, משרד תיווך המתמחה בפינוי-בינוי.\nיש לנו קונים רציניים לאזור שלך.\nאשמח לשוחח - {agent_phone}\nQUANTUM Real Estate`,
+  appointment_invite: {
+    name: 'הזמנה לפגישה',
+    template: `שלום {name},\n{developer_name} כאן.\nאנחנו מעוניינים לתאם איתכם פגישת {activity_type} בנוגע ל{building_name}.\nנשמח לשוחח - {contact_phone}\nמינהלת`,
     maxLength: 480
   },
-  seller_followup: {
-    name: 'מעקב למוכר',
-    template: `שלום {name},\nפניתי אליך לפני מספר ימים בנוגע לנכס ב{address}.\nעדיין יש לנו עניין רב מצד קונים.\nנשמח לעזור - {agent_phone}\nQUANTUM`,
+  appointment_reminder: {
+    name: 'תזכורת לפגישה',
+    template: `שלום {name},\nתזכורת לפגישת {activity_type} שתואמה ל{date} בשעה {time}.\nבניין: {building_name}\nלכל שאלה: {contact_phone}\nמינהלת`,
     maxLength: 320
   },
-  buyer_opportunity: {
-    name: 'הזדמנות לקונה',
-    template: `שלום {name},\nיש לנו הזדמנות חדשה שמתאימה לך:\n{complex_name}, {city}\nמכפיל: x{multiplier} | סטטוס: {status}\nלפרטים: {agent_phone}\nQUANTUM`,
+  appointment_confirmation: {
+    name: 'אישור פגישה',
+    template: `שלום {name},\nפגישת {activity_type} אושרה ל{date} בשעה {time}.\nבניין: {building_name}\nנתראה!\nמינהלת`,
     maxLength: 320
   },
-  kones_inquiry: {
-    name: 'פנייה לכונס',
-    template: `לכבוד עו"ד {name},\nבנוגע לנכס בכינוס ב{address}, {city}.\nאנו מ-QUANTUM, משרד תיווך המתמחה בפינוי-בינוי.\nיש לנו קונים פוטנציאליים מיידיים.\nנשמח לשיתוף פעולה - {agent_phone}`,
+  appointment_cancelled: {
+    name: 'ביטול פגישה',
+    template: `שלום {name},\nפגישת {activity_type} שתואמה ל{date} בוטלה.\nלתיאום מחדש: {contact_phone}\nמינהלת`,
     maxLength: 480
   }
 };
 
-// --- WhatsApp Templates (QUANTUM account - capi.inforu.co.il) ---
-// Updated 2026-03-11: added visit_invite_button template
+// --- WhatsApp Templates (מינהלת account - capi.inforu.co.il) ---
+// Updated 2026-03-28: cleaned QUANTUM references, added minhelet templates
 const WA_TEMPLATES = {
   // ---- scheduling / bot templates ----
   meeting_invite:         { templateId: '141183', name: 'הזמנה למפגש נציגות',                                    params: [], hasButtons: false },
@@ -66,7 +66,7 @@ const WA_TEMPLATES = {
   // === Button (Call-To-Action / URL) ===
   //   Label:    לתיאום לחצו
   //   Type:     URL
-  //   Base URL: https://pinuy-binuy-analyzer-production.up.railway.app/booking/
+  //   Base URL: https://minhelet-bot-production.up.railway.app/reschedule.html?token=
   //   Dynamic suffix: {{1}}   ← booking token appended at send time
   //
   // === Body variables ===
@@ -83,7 +83,7 @@ const WA_TEMPLATES = {
     name: 'הזמנה לביקור מקצועי עם כפתור תיאום',
     params: ['firstName', 'visitDate', 'professionalType', 'developerName'],
     hasButtons: true,
-    buttonBaseUrl: 'https://pinuy-binuy-analyzer-production.up.railway.app/booking/',
+    buttonBaseUrl: 'https://minhelet-bot-production.up.railway.app/reschedule.html?token=',
     pendingApproval: true
   },
 
@@ -107,12 +107,9 @@ const WA_TEMPLATES = {
   file_link_updated:      { templateId: '157823', name: 'תבנית בדיקה גינדי (2)',                                   params: [], hasButtons: false },
 };
 
+// Legacy mapping (kept for backward compatibility)
 const QUANTUM_WA_MAPPINGS = {
-  seller_initial:   'file_link_basic',
-  seller_followup:  'institutional_message',
-  buyer_opportunity:'project_attendance',
-  kones_inquiry:    'representative_intro',
-  test_message:     'test_message'
+  test_message: 'test_message'
 };
 
 // ==================== AUTH ====================
@@ -415,11 +412,11 @@ async function sendWhatsAppChatDebug(phone, message, rawOptions = {}) {
   const normalizedPhone = normalizePhoneLocal(phone);
   const payload = {
     Data: {
-      Message: message || 'QUANTUM debug test',
+      Message: message || 'מינהלת debug test',
       Phone: normalizedPhone || phone,
       Settings: {
         CustomerMessageId: rawOptions.customerMessageId || String(Date.now()),
-        CustomerParameter: rawOptions.customerParameter || 'QUANTUM'
+        CustomerParameter: rawOptions.customerParameter || 'מינהלת'
       }
     }
   };
@@ -540,7 +537,7 @@ async function bulkSend(templateKey, recipientsList, options = {}) {
 
 async function logMessage(result, message, phones, options = {}) {
   try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS sent_messages (id SERIAL PRIMARY KEY, phone VARCHAR(20), message TEXT, template_key VARCHAR(50), status VARCHAR(20), status_code INTEGER, status_description TEXT, listing_id INTEGER, complex_id INTEGER, channel VARCHAR(20) DEFAULT 'sms', template_id VARCHAR(50), sender VARCHAR(50) DEFAULT 'QUANTUM', created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS sent_messages (id SERIAL PRIMARY KEY, phone VARCHAR(20), message TEXT, template_key VARCHAR(50), status VARCHAR(20), status_code INTEGER, status_description TEXT, listing_id INTEGER, complex_id INTEGER, channel VARCHAR(20) DEFAULT 'sms', template_id VARCHAR(50), sender VARCHAR(50) DEFAULT 'מינהלת', created_at TIMESTAMP DEFAULT NOW())`);  
     for (const phone of phones) {
       await pool.query(`INSERT INTO sent_messages (phone, message, template_key, status, status_code, status_description, listing_id, complex_id, channel, template_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [phone, message.substring(0, 500), options.templateKey || null, result.success ? 'sent' : 'failed', result.status, result.description, options.listingId || null, options.complexId || null, options.channel || 'sms', result.templateId || null]);
@@ -561,7 +558,7 @@ async function checkAccountStatus() {
   if (!username || !password) return { configured: false, error: 'INFORU credentials not set' };
   const result = { configured: true, credentialsValid: true, sms: null, whatsapp: null };
   try {
-    const xml = buildXmlPayload(username, password, '0000000000', 'QUANTUM test message', DEFAULT_SENDER);
+    const xml = buildXmlPayload(username, password, '0000000000', 'מינהלת test message', DEFAULT_SENDER);
     const resp = await axios.post(INFORU_XML_URL, null, { params: { InforuXML: xml }, headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8' }, timeout: 10000 });
     const status = parseInt((resp.data.match(/<Status>(.*?)<\/Status>/) || [])[1] || '-999');
     const description = (resp.data.match(/<Description>(.*?)<\/Description>/) || [])[1] || 'Unknown';
